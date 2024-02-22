@@ -101,7 +101,6 @@ rm -rf $SOURCES_DIR/mytonctrl
 pip3 uninstall -y mytonctrl
 
 git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
-git config --global --add safe.directory $SOURCES_DIR/${repo}
 cd $SOURCES_DIR/${repo}
 
 pip3 install -U .  # TODO: make installation from git directly
@@ -115,6 +114,10 @@ if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
     user=$(logname)
 fi
 echo "User: $user"
+
+sudo su $user -c "git config --global --add safe.directory $SOURCES_DIR/${repo}"
+sudo su $user -c "git config --global --add safe.directory $SOURCES_DIR/ton"
+
 python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump}
 
 # set migrate version
