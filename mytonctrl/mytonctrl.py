@@ -10,6 +10,7 @@ local = MyPyClass(__file__)
 console = MyPyConsole()
 ton = MyTonCore()
 
+
 def Init(argv):
 	# Load translate table
 	local.init_translator(local.buffer.my_dir + "translate.json")
