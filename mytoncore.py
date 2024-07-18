@@ -3066,7 +3066,7 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
-		if saveOffers is None:
+		if saveOffers is None or isinstance(saveOffers, list):
 			saveOffers = dict()
 			local.db[bname] = saveOffers
 		return saveOffers
@@ -3660,6 +3660,17 @@ class MyTonCore():
 	def delete_custom_overlay(self, name: str):
 		del local.db['custom_overlays'][name]
 		local.save()
+
+	def set_collator_config(self, location: str):
+		local.db['collator_config'] = location
+		local.save()
+
+	def get_collator_config(self):
+		default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
+		location = local.db.get('collator_config', default)
+		if location is None:
+			location = default
+		return location
 
 	def GetNetworkName(self):
 		mainnetValidatorsElectedFor = 65536
