@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 
-import time
+from sys import path
+path.append("/usr/src/mytonctrl/")
+from mytoncore import *
 
-from mypylib.mypylib import MyPyClass
-from mytoncore import MyTonCore, Sleep
-
-
-local = MyPyClass('./tests')
-local.db["config"]["logLevel"] = "info"
-load = 100
-ton = MyTonCore(local)
+Local = MyPyClass(__file__)
+ton = MyTonCore()
 
 
 def Init():
 	wallets = list()
-	local.buffer["wallets"] = wallets
+	Local.buffer["wallets"] = wallets
 	walletsNameList = ton.GetWalletsNameList()
 	
 	# Create tests wallet
@@ -54,7 +50,7 @@ def Init():
 			buff_wallet = wallet
 			buff_wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.MoveGrams(wallet, testsWallet.addr, need, wait=False)
-			local.AddLog(testsWallet.name + " <<< " + wallet.name)
+			Local.AddLog(testsWallet.name + " <<< " + wallet.name)
 	if buff_wallet:
 		ton.WaitTransaction(buff_wallet, False)
 	#end for
@@ -67,12 +63,12 @@ def Init():
 		if wallet.account.status == "uninit":
 			wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.SendFile(wallet.bocFilePath)
-		local.AddLog(str(wallet.subwallet) + " - OK")
+		Local.AddLog(str(wallet.subwallet) + " - OK")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
 def Work():
-	wallets = local.buffer["wallets"]
+	wallets = Local.buffer["wallets"]
 	for i in range(load):
 		if i + 1 == load:
 			i = -1
@@ -82,7 +78,7 @@ def Work():
 		wallet2 = wallets[i+1]
 		wallet1.oldseqno = ton.GetSeqno(wallet1)
 		ton.MoveGrams(wallet1, wallet2.addr, 3.14, wait=False)
-		local.AddLog(wallet1.name + " >>> " + wallet2.name)
+		Local.AddLog(wallet1.name + " >>> " + wallet2.name)
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -91,7 +87,7 @@ def General():
 	while True:
 		time.sleep(1)
 		Work()
-		local.AddLog("Work - OK")
+		Local.AddLog("Work - OK")
 	#end while
 #end define
 
@@ -100,8 +96,13 @@ def General():
 ###
 ### Start test
 ###
+Local = MyPyClass(__file__)
+Local.db["config"]["logLevel"] = "info"
+Local.Run()
 
-local.Run()
+ton = MyTonCore()
+local.db["config"]["logLevel"] = "info"
 load = 100
-local.StartCycle(General, sec=1)
+
+Local.StartCycle(General, sec=1)
 Sleep()
