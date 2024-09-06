@@ -2325,6 +2325,11 @@ class MyTonCore():
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
+			creators_whitelist = self.local.db.get('allowedComplaintCreators')
+			if creators_whitelist is not None and complaint['rewardAddr'] not in creators_whitelist.split(','):
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint creator is not in whitelist", "info")
+				continue
+
 			# check complaint fine value
 			if complaint['suggestedFine'] != 101:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3708
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")

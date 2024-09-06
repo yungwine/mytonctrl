@@ -55,6 +55,7 @@ SETTINGS = {
     'defaultCustomOverlaysUrl': Setting(None, 'https://ton-blockchain.github.io/fallback_custom_overlays.json', 'Default custom overlays config url'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
+    'allowedComplaintCreators': Setting('validator', None, 'List of addresses allowed addresses to create complaints')
 }
 
 
