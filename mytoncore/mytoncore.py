@@ -2316,6 +2316,7 @@ class MyTonCore():
 					exists = True
 					vid = item['id']
 					complaint['vid'] = vid
+					complaint['efficiency'] = item['efficiency']
 					break
 
 			if not exists:
