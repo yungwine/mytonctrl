@@ -561,7 +561,7 @@ def post_complaints(local, ton):
     config32 = ton.GetConfig32()
     end = config32.get("endWorkTime")
     ts = get_timestamp()
-    if not(end < ts < end + 600):  # send complaints only once after the round end
+    if not(end + 300 <= ts < end + 900):  # send complaints only once after the round end
         return
     send_complaints(ton)
 
@@ -614,7 +614,7 @@ def General(local):
 
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
-    local.start_cycle(post_complaints, sec=660, args=(local, ton, ))
+    local.start_cycle(post_complaints, sec=600, args=(local, ton, ))
 
 
     thr_sleep()
