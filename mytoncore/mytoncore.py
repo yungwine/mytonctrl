@@ -2315,6 +2315,7 @@ class MyTonCore():
 				if pseudohash == complaint['pseudohash']:
 					exists = True
 					vid = item['id']
+					complaint['vid'] = vid
 					break
 
 			if not exists:

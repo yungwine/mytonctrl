@@ -38,7 +38,7 @@ from mytoncore.functions import (
 	Slashing,
 	GetMemoryInfo,
 	GetSwapInfo,
-	GetBinGitHash,
+	GetBinGitHash, send_complaints,
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
@@ -80,6 +80,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
+	console.AddItem("post_complaints", inject_globals(send_complaints), local.translate("send_complaints_cmd"))
 
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))

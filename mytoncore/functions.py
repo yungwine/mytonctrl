@@ -10,7 +10,7 @@ import requests
 import subprocess
 
 from mytoncore.mytoncore import MyTonCore
-from mytonctrl.utils import fix_git_config
+from mytonctrl.utils import fix_git_config, timestamp2utcdatetime
 from mytoninstaller.config import GetConfig
 from mypylib.mypylib import (
     b2mb,
@@ -520,6 +520,52 @@ def save_past_events(local, ton):
     local.try_function(ton.GetValidatorsList, args=[True])  # cache past vl
 
 
+def send_complaints(local, ton, *args):
+    config32 = ton.GetConfig32()
+    election_id = config32.get("startWorkTime")
+    end = config32.get("endWorkTime")
+
+    text = f"""
+<b>Penalties for round {election_id}</b>
+Round's started: <b>{timestamp2utcdatetime(election_id)}</b>
+Round's over: <b>{timestamp2utcdatetime(end)}</b>
+
+"""
+
+    import telebot
+    token = local.db.get("BotToken")
+    chat_id = local.db.get("ChatId")
+    if token is None or chat_id is None:
+        raise Exception("BotToken is not set")
+    bot = telebot.TeleBot(token, parse_mode="HTML")
+
+    complaints = ton.GetComplaints(election_id)
+    valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    for c in valid_complaints.values():
+
+        text += f"""
+<b>Index: {c.get("vid")}</b>
+ANDL: <code>{c.get("adnl")}</code>
+Efficiency: <b>{c.get("efficiency")}%</b>
+Penalty: <b>{c.get("suggestedFine")} TON</b>
+
+"""
+
+    bot.send_message(chat_id, text)
+
+
+def post_complaints(local, ton):
+    local.add_log("start post_complaints function", "debug")
+    if not local.db.get("isPosting"):
+        return
+    config32 = ton.GetConfig32()
+    end = config32.get("endWorkTime")
+    ts = get_timestamp()
+    if not(end < ts < end + 600):  # send complaints only once after the round end
+        return
+    send_complaints(local, ton)
+
+
 def ScanLiteServers(local, ton):
     # Считать список серверов
     filePath = ton.liteClient.configPath
@@ -568,6 +614,8 @@ def General(local):
 
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
+    local.start_cycle(post_complaints, sec=660, args=(local, ton, ))
+
 
     thr_sleep()
 # end define
