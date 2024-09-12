@@ -520,7 +520,7 @@ def save_past_events(local, ton):
     local.try_function(ton.GetValidatorsList, args=[True])  # cache past vl
 
 
-def send_complaints(local, ton, *args):
+def send_complaints(ton, *args):
     config32 = ton.GetConfig32()
     election_id = config32.get("startWorkTime")
     end = config32.get("endWorkTime")
@@ -533,8 +533,8 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
 """
 
     import telebot
-    token = local.db.get("BotToken")
-    chat_id = local.db.get("ChatId")
+    token = ton.local.db.get("BotToken")
+    chat_id = ton.local.db.get("ChatId")
     if token is None or chat_id is None:
         raise Exception("BotToken is not set")
     bot = telebot.TeleBot(token, parse_mode="HTML")
@@ -563,7 +563,7 @@ def post_complaints(local, ton):
     ts = get_timestamp()
     if not(end < ts < end + 600):  # send complaints only once after the round end
         return
-    send_complaints(local, ton)
+    send_complaints(ton)
 
 
 def ScanLiteServers(local, ton):
