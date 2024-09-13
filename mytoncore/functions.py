@@ -541,11 +541,15 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
 
     complaints = ton.GetComplaints(election_id)
     valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    if not valid_complaints:
+        text += "No poor performing validators in the round"
+        bot.send_message(chat_id, text)
+        return
     for c in valid_complaints.values():
 
         text += f"""
 <b>Index: {c.get("vid")}</b>
-ANDL: <code>{c.get("adnl")}</code>
+ADNL: <code>{c.get("adnl")}</code>
 Efficiency: <b>{c.get("efficiency")}%</b>
 Penalty: <b>{c.get("suggestedFine")} TON</b>
 
