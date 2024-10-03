@@ -551,7 +551,7 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
 <b>Index: {c.get("vid")}</b>
 ADNL: <code>{c.get("adnl")}</code>
 Efficiency: <b>{c.get("efficiency")}%</b>
-Penalty: <b>{c.get("suggestedFine")} TON</b>
+Penalty: <b>{round(c.get("suggestedFine"))} TON</b>
 
 """
 
