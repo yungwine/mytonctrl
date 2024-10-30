@@ -540,12 +540,13 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
     bot = telebot.TeleBot(token, parse_mode="HTML")
 
     complaints = ton.GetComplaints(election_id)
-    valid_complaints = ton.get_valid_complaints(complaints, election_id)
-    if not valid_complaints:
+    passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
+    # valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    if not passed_complaints:
         text += "No poor performing validators in the round"
         bot.send_message(chat_id, text)
         return
-    for c in valid_complaints.values():
+    for c in passed_complaints:
 
         text += f"""
 <b>Index: {c.get("vid")}</b>
