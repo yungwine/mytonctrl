@@ -572,7 +572,7 @@ def post_complaints(local, ton):
     config32 = ton.GetConfig32()
     end = config32.get("endWorkTime")
     ts = get_timestamp()
-    if not(end + 600 <= ts < end + 1200):  # send complaints only once after the round end
+    if not(end + 1200 <= ts < end + 1800):  # send complaints only once after the round end
         return
     send_complaints(ton)
 
