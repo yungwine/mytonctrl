@@ -542,11 +542,17 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
     complaints = ton.GetComplaints(election_id)
     passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
     # valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    vl_past = ton.GetValidatorsList(past=True)
     if not passed_complaints:
         text += "No poor performing validators in the round"
         bot.send_message(chat_id, text)
         return
     for c in passed_complaints:
+        for vid, vl in enumerate(vl_past):
+            if vl.get("adnlAddr") == c.get("adnl"):
+                c["vid"] = vid
+                c["efficiency"] = vl.get("efficiency")
+                break
 
         text += f"""
 <b>Index: {c.get("vid")}</b>
