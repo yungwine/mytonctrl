@@ -265,6 +265,27 @@ Alert text:
         if not ok:
             self.send_alert("adnl_connection_failed")
 
+    def get_election_stake(self):
+        config = self.ton.GetConfig36()
+        if not config["validators"]:
+            return
+        save_elections = self.ton.GetSaveElections()
+        elections = save_elections.get(config["startWorkTime"])
+        if elections is None:
+            return
+        adnl = self.ton.GetAdnlAddr()
+        if adnl not in elections:
+            return
+        return elections[adnl].get("stake")
+
+    def get_returned_stake(self):
+        pass
+
+
+
+    def check_stake(self):
+
+
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
@@ -279,6 +300,7 @@ Alert text:
         self.local.try_function(self.check_sync)
         self.local.try_function(self.check_slashed)
         self.local.try_function(self.check_adnl_connection_failed)
+
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
