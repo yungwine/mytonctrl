@@ -133,13 +133,15 @@ def Status(local, args):
 	node_args = get_node_args()
 	color_print("{cyan}===[ Node arguments ]==={endc}")
 	for key, value in node_args.items():
-		print(f"{key}: {value}")
+		for v in value:
+			print(f"{key}: {v}")
 #end define
 
 
 def set_node_argument(local, args):
 	if len(args) < 1:
-		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
+		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)].\n"
+					"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
 		return
 	arg_name = args[0]
 	args = [arg_name, args[1] if len(args) > 1 else ""]
@@ -194,7 +196,6 @@ def PrintLiteServerConfig(local, args):
 def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
-	user = local.buffer["user"]
 	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "clc", "-i", initBlock_b64]
 	run_as_root(args)
 #end define

@@ -48,12 +48,12 @@ ALERTS = {
     "out_of_sync": Alert(
         "critical",
         "Node is out of sync on {sync} sec.",
-        0
+        300
     ),
     "service_down": Alert(
         "critical",
         "validator.service is down.",
-        0
+        300
     ),
     "adnl_connection_failed": Alert(
         "high",
@@ -189,6 +189,8 @@ Alert text:
         print_table(table)
 
     def test_alert(self, args):
+        if not self.inited:
+            self.init()
         self.send_message('Test alert')
 
     def check_db_usage(self):

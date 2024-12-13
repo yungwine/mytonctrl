@@ -369,14 +369,6 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
-	if ton.using_validator():
-		try:
-			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
-			node_args = get_node_args()
-			if node_args.get('--state-ttl') == '604800':
-				set_node_argument(ton.local, ["--state-ttl", "-d"])
-		except Exception as e:
-			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
@@ -944,7 +936,7 @@ def create_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
 		return
 	if '-y' not in args:
-		res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
+		res = input(f'Mytoncore service will be stopped for few seconds while backup is created, Proceed [y/n]?')
 		if res.lower() != 'y':
 			print('aborted.')
 			return
