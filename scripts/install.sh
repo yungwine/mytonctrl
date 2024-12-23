@@ -72,7 +72,7 @@ done
 if [ "${mode}" = "" ]; then  # no mode
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    pip3 install inquirer==3.4.0
+    pip3 install inquirer==3.4.0 --break-system-packages
     python3 install.py
     exit
 fi
@@ -117,6 +117,10 @@ if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
     bash /tmp/ton_installer.sh -c ${config} -v ${ton_node_version}
 fi
+
+export python3_venv_path=/opt/virtualenv/mytonctrl
+python3 -m venv $python3_venv_path
+source $python3_venv_path/bin/activate
 
 # Cloning mytonctrl
 echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"

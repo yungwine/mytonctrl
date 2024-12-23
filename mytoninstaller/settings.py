@@ -130,7 +130,8 @@ def FirstMytoncoreSettings(local):
 
 	# Прописать mytoncore.py в автозагрузку
 	# add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
-	add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
+	python3_path = os.getenv('python3_venv_path', '/usr')
+	add2systemd(name="mytoncore", user=user, start=f"{python3_path}/bin/python3 -m mytoncore")
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)

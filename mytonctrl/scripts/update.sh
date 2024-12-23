@@ -31,6 +31,11 @@ ENDC='\033[0m'
 # Go to work dir
 cd ${srcdir}
 
+python3_venv_path=/opt/virtualenv/mytonctrl
+if [ -d $python3_venv_path ]; then
+  source $python3_venv_path/bin/activate
+fi
+
 # uninstall previous version
 rm -rf ${srcdir}/${repo}
 pip3 uninstall -y mytonctrl
