@@ -524,9 +524,10 @@ def send_complaints(ton, *args):
     config32 = ton.GetConfig32()
     election_id = config32.get("startWorkTime")
     end = config32.get("endWorkTime")
+    election_id_text = f'<a href="https://validators.ton.org/?cycle_id={election_id}">{election_id}</a>'
 
     text = f"""
-<b>Penalties for round {election_id}</b>
+<b>Penalties for round {election_id_text}</b>
 Round's started: <b>{timestamp2utcdatetime(election_id)}</b>
 Round's over: <b>{timestamp2utcdatetime(end)}</b>
 
