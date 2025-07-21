@@ -1226,8 +1226,11 @@ class MyTonCore():
 			self.send_boc_toncenter(filePath)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
-		if remove == True:
-			os.remove(filePath)
+		if remove:
+			try:
+				os.remove(filePath)
+			except Exception as e:
+				self.local.add_log(f'Failed to remove file {filePath}: {e}', 'warning')
 	#end define
 
 	def send_boc_toncenter(self, file_path: str):
