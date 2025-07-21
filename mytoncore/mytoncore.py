@@ -2888,7 +2888,8 @@ class MyTonCore():
 		if save_offers is None or isinstance(save_offers, list):
 			save_offers = dict()
 			self.local.db[bname] = save_offers
-		self.offers_gc(save_offers)
+		if save_offers:
+			self.offers_gc(save_offers)
 		return save_offers
 	#end define
 
