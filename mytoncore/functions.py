@@ -670,11 +670,13 @@ def gc_import(local, ton):
 
 
 def backup_mytoncore_logs(local: MyPyClass, ton: MyTonCore):
+    if os.path.islink(local.buffer.log_file_name):  # skip if log is symlink, probably we are in docker
+        return
     logs_path = os.path.join(ton.tempDir, 'old_logs')
     os.makedirs(logs_path, exist_ok=True)
     for file in os.listdir(logs_path):
         file_path = os.path.join(logs_path, file)
-        if time.time() - os.path.getmtime(file_path) < 3600:  # check that last file was created not less than an hour ago
+        if time.time() - os.path.getmtime(file_path) < 3600*4:
             return
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_backup_tmp_path = os.path.join(logs_path, 'mytoncore_log_' + now + '.log')
@@ -705,7 +707,7 @@ def General(local):
     local.start_cycle(Statistics, sec=10, args=(local, ))
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
-    local.start_cycle(backup_mytoncore_logs, sec=3600*4, args=(local, ton, ))
+    local.start_cycle(backup_mytoncore_logs, sec=600, args=(local, ton, ))
     local.start_cycle(check_mytoncore_db, sec=600, args=(local, ton, ))
 
     if local.db.get("onlyNode"):  # mytoncore service works only for telemetry
