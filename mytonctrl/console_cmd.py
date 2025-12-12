@@ -12,7 +12,7 @@ USAGES = {
     "disable_mode": "<mode_name>",
     "about": "<mode_name>",
     "get": "<setting_name>",
-    "set": "<setting_name> <value>",
+    "set": "<setting_name> <value> [--force]",
     "create_backup": "[filename] [-u <user>]",
     "restore_backup": " <filename> [-y] [--skip-create-backup] [-u <user>]",
     "add_custom_overlay": "<name> <path_to_config>",

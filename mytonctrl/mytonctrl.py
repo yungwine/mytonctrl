@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.utils import get_package_resource_path
 from mytoncore.telemetry import is_host_virtual
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
+from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
 from mytonctrl.migrate import run_migrations
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
 	pop_user_from_args, pop_arg_from_args
@@ -1019,7 +1019,7 @@ def GetSettings(ton, args):
 #end define
 
 def SetSettings(local, ton, args):
-	if not check_usage_two_args("set", args):
+	if not check_usage_args_min_max_len("set", args, min_len=2, max_len=3):
 		return
 	name = args[0]
 	value = args[1]

@@ -40,7 +40,7 @@ class BackupModule(MtcModule):
             return subprocess.run(["bash", backup_script_path, "-u", user] + args, timeout=5)
 
     def create_backup(self, args):
-        if not check_usage_args_min_max_len("create_backup", args, 0, 2):
+        if not check_usage_args_min_max_len("create_backup", args, 0, 3):
             return
         tmp_dir = self.create_tmp_ton_dir()
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", tmp_dir]
