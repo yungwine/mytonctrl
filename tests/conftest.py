@@ -101,6 +101,7 @@ def cli(local, ton, monkeypatch) -> ConsoleProtocol:
     monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
     monkeypatch.setattr(MyTonCore, "using_pool", lambda self: True)
     monkeypatch.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_single_nominator", lambda self: True)
 
     Init(local, ton, console, argv=[])
     console.debug = True
