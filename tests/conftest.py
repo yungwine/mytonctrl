@@ -23,6 +23,9 @@ class TestLocal(MyPyClass):
     def get_my_temp_dir(self):
         return ensure_dir(self._temp_dir)
 
+    def self_test(self):
+        pass
+
     # def write_db(self, data):
     #     self.buffer.old_db = Dict(self.db)
     #
