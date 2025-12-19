@@ -95,15 +95,15 @@ class MyMyPyConsole(MyPyConsole):
 
 
 @pytest.fixture()
-def cli(local, ton, monkeypatch) -> ConsoleProtocol:
+def cli(local, ton) -> ConsoleProtocol:
     console = MyMyPyConsole()
     console.start_function = None  # todo: do not forget about start function
-    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
-    monkeypatch.setattr(MyTonCore, "using_pool", lambda self: True)
-    monkeypatch.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
-    monkeypatch.setattr(MyTonCore, "using_single_nominator", lambda self: True)
-
+    mp = pytest.MonkeyPatch()
+    mp.setattr(MyTonCore, "using_pool", lambda self: True)
+    mp.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
+    mp.setattr(MyTonCore, "using_single_nominator", lambda self: True)
     Init(local, ton, console, argv=[])
+    mp.undo()
     console.debug = True
     # console.Run()
     return console
