@@ -98,6 +98,8 @@ class MyMyPyConsole(MyPyConsole):
 def cli(local, ton, monkeypatch) -> ConsoleProtocol:
     console = MyMyPyConsole()
     console.start_function = None  # todo: do not forget about start function
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_pool", lambda self: True)
 
     Init(local, ton, console, argv=[])
     console.debug = True
