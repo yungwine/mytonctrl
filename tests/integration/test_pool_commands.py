@@ -1,14 +1,9 @@
 import os
-import struct
-from modules.pool import PoolModule
 from pytest_mock import MockerFixture
 from mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
 
-
-def create_pool_file(base_path: str, addr: bytes) -> None:
-    with open(base_path + ".addr", 'wb') as f:
-        f.write(addr)
+from tests.helpers import create_pool_file
 
 
 def test_pools_list(cli, ton, monkeypatch, mocker: MockerFixture):
