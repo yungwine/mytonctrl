@@ -29,7 +29,7 @@ class WalletModule(MtcModule):
             subwallet = int(args[3])
         else:
             subwallet = 698983191 + workchain  # 0x29A9A317 + workchain
-        wallet = self.ton.create_wallet(walletName, workchain, version, subwallet=subwallet)
+        wallet = self.ton.CreateWallet(walletName, workchain, version, subwallet=subwallet)
         table = list()
         table += [["Name", "Workchain", "Address"]]
         table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
