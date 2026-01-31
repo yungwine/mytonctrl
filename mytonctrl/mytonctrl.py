@@ -275,6 +275,8 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 
 	if '--url' in input_args:
 		git_url = pop_arg_from_args(input_args, '--url')
+		if not git_url:
+			raise Exception("git url is empty after --url flag")
 		if branch is None:
 			if '#' in git_url:
 				ref_fragment = git_url.rsplit('#', 1)[1]

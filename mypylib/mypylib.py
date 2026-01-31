@@ -58,7 +58,7 @@ class Dict(dict):
 		self[key] = value
 	#end define
 
-	def __getattr__(self, key):
+	def __getattr__(self, key: str):
 		return self.get(key)
 	#end define
 #end class
