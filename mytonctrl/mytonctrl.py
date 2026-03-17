@@ -146,8 +146,6 @@ def Init(local, ton, console, argv):
 		module = AlertBotModule(ton, local)
 		module.add_console_commands(console)
 
-	add_command(local, console, "benchmark", inject_globals(run_benchmark))
-
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
 	for opt, arg in opts:
@@ -401,29 +399,6 @@ def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master', us
 	module = BtcTeleportModule(ton, local)
 	local.try_function(module.init, args=[reinstall, branch, user])
 
-
-def run_benchmark(ton, args):
-	timeout = 200
-	with get_package_resource_path('mytonctrl', 'scripts/benchmark.sh') as benchmark_script_path:
-		with get_package_resource_path('mytonctrl', 'scripts/etabar.py') as etabar_script_path:
-			benchmark_result_path = "/tmp/benchmark_result.json"
-			run_args = ["python3", etabar_script_path, str(timeout), benchmark_script_path, benchmark_result_path]
-			exit_code = run_as_root(run_args)
-	with open(benchmark_result_path, 'rt') as file:
-		text = file.read()
-	if exit_code != 0:
-		color_print("Benchmark - {red}Error:{endc} " + text)
-		return
-	#end if
-
-	data = Dict(json.loads(text))
-	table = list()
-	table += [["Test type", "Read speed", "Write speed", "Read iops", "Write iops", "Random ops"]]
-	table += [["Fio lite", data.lite.read_speed, data.lite.write_speed, data.lite.read_iops, data.lite.write_iops, None]] # RND-4K-QD64
-	table += [["Fio hard", data.hard.read_speed, data.hard.write_speed, data.hard.read_iops, data.hard.write_iops, None]] # RND-4K-QD1
-	table += [["RocksDB", None, None, None, None, data.full.random_ops]]
-	print_table(table)
-#end define
 
 def check_mytonctrl_update(local):
 	git_path = local.buffer.my_dir
