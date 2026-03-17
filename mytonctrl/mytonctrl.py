@@ -8,6 +8,9 @@ import socket
 import sys
 import getopt
 import os
+import shutil
+import tempfile
+from pathlib import Path
 
 from functools import partial
 
@@ -85,6 +88,7 @@ def Init(local, ton, console, argv):
 	add_command(local, console, "get", inject_globals(GetSettings))
 	add_command(local, console, "set", inject_globals(SetSettings))
 	add_command(local, console, "download_archive_blocks", inject_globals(download_archive_blocks))
+	add_command(local, console, "benchmark", inject_globals(run_benchmark))
 
 	from modules.backups import BackupModule
 	module = BackupModule(ton, local)
@@ -398,6 +402,45 @@ def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master', us
 	from modules.btc_teleport import BtcTeleportModule
 	module = BtcTeleportModule(ton, local)
 	local.try_function(module.init, args=[reinstall, branch, user])
+
+
+def run_benchmark(args: list):
+	if shutil.which("uv") is None:
+		color_print("{red}Error: uv is not installed. Install it: https://docs.astral.sh/uv/getting-started/installation/{endc}")
+		return
+
+	if get_service_status("validator"):
+		color_print("{red}Error: validator service is running. Stop it before running benchmark: `sudo systemctl stop validator`{endc}")
+		return
+
+	with tempfile.TemporaryDirectory() as tmp_dir:
+		tmp_dir = Path(tmp_dir)
+		with get_package_resource_path('mytonctrl', 'scripts/benchmark.py') as benchmark_path:
+			shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
+
+			subprocess.run(["uv", "init", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
+
+			src_dir = Path("/usr/src/ton")
+			test_dir = tmp_dir / "test"
+			tontester_dir = test_dir / "tontester"
+
+			shutil.copytree(src_dir / "test", test_dir)
+
+			tl_dest = tmp_dir / "tl" / "generate" / "scheme"
+			Path(tl_dest).mkdir(parents=True, exist_ok=True)
+
+			for f in (src_dir / "tl" / "generate" / "scheme").glob('*.tl'):
+				shutil.copy(f, tl_dest)
+
+			subprocess.run(["uv", "add", tontester_dir], cwd=tmp_dir, check=True)
+
+			subprocess.run(["uv", "run", tontester_dir / "generate_tl.py"], cwd=tmp_dir, check=True)
+
+			cmd = ["uv", "run", "benchmark.py",
+				"--build-dir", '/usr/bin/ton',
+				"--source-dir", '/usr/src/ton',
+				"--work-dir", str(tmp_dir / "test" / "integration" / ".network")] + args
+			subprocess.run(cmd, cwd=tmp_dir)
 
 
 def check_mytonctrl_update(local):
