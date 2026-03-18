@@ -155,9 +155,9 @@ class MyPyClass:
 		self.buffer.thread_count = None
 		self.buffer.memory_using = None
 		self.buffer.free_space_memory = None
-		
+
 		self.refresh()
-		
+
 		# Catch the shutdown signal
 		signal.signal(signal.SIGINT, self.exit)
 		signal.signal(signal.SIGTERM, self.exit)
@@ -193,15 +193,15 @@ class MyPyClass:
 		self.buffer.db_path = my_work_dir + my_name + ".db"
 		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
 		self.buffer.venvs_dir = f"/home/{user}/.local/venv"
-		
+
 		# Check all directorys
 		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
 		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
-		
+
 		# Load local database
 		self.load_db()
 		self.set_default_config()
-		
+
 		# Remove old log file
 		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
 			os.remove(self.buffer.log_file_name)
@@ -514,13 +514,28 @@ class MyPyClass:
 		return Dict(data)
 	#end define
 
-	def write_db(self, data):
-		db_path = self.buffer.db_path
+	def write_db(self, data: dict):
+		db_path = os.path.realpath(self.buffer.db_path)
 		text = json.dumps(data, indent=4)
 		self.lock_file(db_path)
-		self.write_file(db_path, text)
-		self.unlock_file(db_path)
-	#end define
+		try:
+			self._write_file_atomic(db_path, text)
+		finally:
+			self.unlock_file(db_path)
+
+	def _write_file_atomic(self, path: str, text=""):
+		tmp_path = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
+		try:
+			with open(tmp_path, 'wt') as file:
+				file.write(text)
+				file.flush()
+			os.replace(tmp_path, path)
+		finally:
+			if os.path.isfile(tmp_path):
+				try:
+					os.remove(tmp_path)
+				except OSError:
+					pass
 
 	def lock_file(self, path):
 		pid_path = path + ".lock"
@@ -540,7 +555,7 @@ class MyPyClass:
 		except:
 			print("Wow. You are faster than me")
 	#end define
-	
+
 	def merge_three_dicts(self, local_data, file_data, old_file_data):
 		if (id(local_data) == id(file_data) or
 			id(file_data) == id(old_file_data) or
@@ -549,7 +564,7 @@ class MyPyClass:
 			print(file_data.keys())
 			raise Exception(f"merge_three_dicts error: merge the same object")
 		#end if
-		
+
 		need_write_local_data = False
 		if local_data == file_data and file_data == old_file_data:
 			return need_write_local_data
@@ -577,7 +592,7 @@ class MyPyClass:
 			self.mtdp_fcfc(key, local_data, file_data, old_file_data)
 		return need_write_local_data
 	#end define
-	
+
 	def mtdp_get_tmp(self, key, local_data, file_data, old_file_data):
 		tmp = Dict()
 		tmp.local_item = local_data.get(key)
@@ -629,10 +644,10 @@ class MyPyClass:
 		file_data = self.read_db(self.buffer.db_path)
 		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
 		self.buffer.old_db = Dict(self.db)
-		if need_write_local_data is True:
+		if need_write_local_data:
 			self.write_db(self.db)
 	#end define
-	
+
 	def save(self):
 		self.save_db()
 		self.write_log()
