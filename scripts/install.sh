@@ -12,7 +12,7 @@ show_help_and_exit() {
     echo ' -a, --author                  Set MyTonCtrl git repo author'
     echo ' -r, --repo                    Set MyTonCtrl git repo name'
     echo ' -b, --branch                  Set MyTonCtrl git repo branch'
-    echo ' -m, --mode  MODE              Install MyTonCtrl with specified mode (validator or liteserver). Leave empty to launch interactive installer'
+    echo ' -m, --mode  MODE              Install MyTonCtrl with specified mode (validator, liteserver or collator). Leave empty to launch interactive installer'
     echo ' --archive                     With -m liteserver, install full archive liteserver'
     echo ' -n, --network  NETWORK        Specify the network (mainnet or testnet)'
     echo ' -g, --node-repo  URL          TON node git repo URL (default: https://github.com/ton-blockchain/ton.git)'
