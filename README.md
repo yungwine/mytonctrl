@@ -46,6 +46,11 @@ Learn more about node types: https://docs.ton.org/v3/documentation/nodes/overvie
 	su root -c 'bash install.sh -m <mode>'
 	```
 
+To install a full archive liteserver, use:
+```shell
+sudo bash install.sh -m liteserver --archive
+```
+
 To view all available installation options use `sudo bash install.sh --help`
 
 ### Installation configuration

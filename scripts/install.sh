@@ -22,6 +22,7 @@ config_overridden=false
 
 show_help_and_exit() {
     echo 'Supported arguments:'
+    echo ' --archive                     With -m liteserver, install full archive liteserver (ARCHIVE_BLOCKS=1, ARCHIVE_TTL=-1)'
     echo ' -c, --config  URL             Provide custom network config'
     echo ' -e, --env-file  PATH          Provide env file with installation parameters'
     echo ' --print-env                   Print result command and envs after interactive installer without installing MyTonCtrl'
@@ -53,6 +54,7 @@ env_file=""
 telemetry=true
 ignore=false
 dump=false
+archive=false
 only_mtc=false
 only_node=false
 backup=none
@@ -72,6 +74,7 @@ while (($#)); do
       ;;
 
     # no arg
+    --archive)      newargv+=(-A) ;;
     --dump)         newargv+=(-d) ;;
     --only-mtc)     newargv+=(-o) ;;
     --only-node)    newargv+=(-l) ;;
@@ -111,8 +114,9 @@ done
 #printf '\n'
 set -- "${newargv[@]}"
 
-while getopts ":c:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
+while getopts ":Ac:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
     case "${flag}" in
+        A) archive=true;;
         c) config=${OPTARG}; config_overridden=true;;
         t) telemetry=false;;
         i) ignore=true;;
@@ -149,6 +153,17 @@ fi
 if [ "$only_mtc" = true ] && [ "$backup" = "none" ]; then
     echo "Backup file must be provided if only mtc installation"
     exit 1
+fi
+
+if [ "$archive" = true ] && [ "$mode" != "liteserver" ]; then
+    echo "Flag --archive can only be used with -m liteserver"
+    exit 1
+fi
+
+if [ "$archive" = true ]; then
+    export ARCHIVE_BLOCKS=1
+    export ARCHIVE_TTL=-1
+    unset STATE_TTL
 fi
 
 
