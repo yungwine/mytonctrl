@@ -51,7 +51,7 @@ To install a full archive liteserver, use:
 sudo bash install.sh -m liteserver --archive
 ```
 
-To view all available installation options use `sudo bash install.sh --help`
+To view all available installation options use `bash install.sh --help`
 
 ### Installation configuration
 

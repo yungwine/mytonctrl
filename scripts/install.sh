@@ -1,25 +1,6 @@
 #!/bin/bash
 set -e
 
-# colors
-COLOR='\033[92m'
-ENDC='\033[0m'
-mydir=`pwd`
-
-# check sudo permissions
-if [ "$(id -u)" != "0" ]; then
-    echo "Please run script as root"
-    exit 1
-fi
-
-author="ton-blockchain"
-repo="mytonctrl"
-branch="master"
-network="mainnet"
-ton_node_version="master"  # Default version
-ton_node_git_url="https://github.com/ton-blockchain/ton.git"
-config_overridden=false
-
 show_help_and_exit() {
     echo 'Supported arguments:'
     echo ' --archive                     With -m liteserver, install full archive liteserver (ARCHIVE_BLOCKS=1, ARCHIVE_TTL=-1)'
@@ -48,7 +29,26 @@ if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
     show_help_and_exit
 fi
 
+# colors
+COLOR='\033[92m'
+ENDC='\033[0m'
+
+# check sudo permissions
+if [ "$(id -u)" != "0" ]; then
+    echo "Please run script as root"
+    exit 1
+fi
+
 # node install parameters
+
+author="ton-blockchain"
+repo="mytonctrl"
+branch="master"
+network="mainnet"
+ton_node_version="master"  # Default version
+ton_node_git_url="https://github.com/ton-blockchain/ton.git"
+config_overridden=false
+
 config="https://ton-blockchain.github.io/global.config.json"
 env_file=""
 telemetry=true
