@@ -3,7 +3,6 @@ set -e
 
 show_help_and_exit() {
     echo 'Supported arguments:'
-    echo ' --archive                     With -m liteserver, install full archive liteserver (ARCHIVE_BLOCKS=1, ARCHIVE_TTL=-1)'
     echo ' -c, --config  URL             Provide custom network config'
     echo ' -e, --env-file  PATH          Provide env file with installation parameters'
     echo ' --print-env                   Print result command and envs after interactive installer without installing MyTonCtrl'
@@ -14,6 +13,7 @@ show_help_and_exit() {
     echo ' -r, --repo                    Set MyTonCtrl git repo name'
     echo ' -b, --branch                  Set MyTonCtrl git repo branch'
     echo ' -m, --mode  MODE              Install MyTonCtrl with specified mode (validator or liteserver). Leave empty to launch interactive installer'
+    echo ' --archive                     With -m liteserver, install full archive liteserver'
     echo ' -n, --network  NETWORK        Specify the network (mainnet or testnet)'
     echo ' -g, --node-repo  URL          TON node git repo URL (default: https://github.com/ton-blockchain/ton.git)'
     echo ' -v, --node-version  VERSION   Specify the TON node version (commit, branch, or tag)'
