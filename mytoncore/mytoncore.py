@@ -3609,12 +3609,12 @@ class MyTonCore():
 		raise Exception("Validator controller not found or not ready")
 	#end define
 
-	def GetControllerRequiredBalanceForLoan(self, controllerAddr, credit, interest):
-		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit} {interest}"
+	def GetControllerRequiredBalanceForLoan(self, controller_addr: str, credit: int, interest: int):
+		cmd = f"runmethodfull {controller_addr} required_balance_for_loan {credit * 10 ** 9} {interest}"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		if data is None:
-			return
+			raise Exception(f"Failed to get GetControllerRequiredBalanceForLoan result: {result}")
 		min_amount = data[0]
 		validator_amount = data[1]
 		return min_amount, validator_amount
@@ -3677,8 +3677,7 @@ class MyTonCore():
 		# Проверить хватает ли ставки валидатора
 		min_amount, validator_amount = self.GetControllerRequiredBalanceForLoan(controllerAddr, max_loan, max_interest)
 		if min_amount > validator_amount:
-			raise Exception("CreateLoanRequest error: Validator stake is too low. Use deposit_to_controller")
-		#end if
+			self.local.add_log("CreateLoanRequest warning: Validator stake is too low. Use deposit_to_controller", "warning")
 
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/generate-loan-request.fif"
