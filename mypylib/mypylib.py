@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf_8 -*-
+from __future__ import annotations
 
 import os
 import re
@@ -20,6 +19,7 @@ import requests
 import threading
 import subprocess
 import datetime as date_time_library
+from typing import Any, Mapping
 from urllib.request import urlopen
 from urllib.error import URLError
 
@@ -30,38 +30,39 @@ DEBUG = "debug"
 
 
 class Dict(dict):
-	def __init__(self, *args, **kwargs):
+
+	def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
 		for item in args:
 			self._parse_dict(item)
 		self._parse_dict(kwargs)
-	#end define
 
-	def _parse_dict(self, d):
+	def _parse_dict(self, d: Mapping[str, Any]) -> None:
 		for key, value in d.items():
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			if type(value) == list:
 				value = self._parse_list(value)
 			self[key] = value
-	#end define
 
-	def _parse_list(self, lst):
+	def _parse_list(self, lst: list[Any]) -> list[Any]:
 		result = list()
 		for value in lst:
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			result.append(value)
 		return result
-	#end define
 
-	def __setattr__(self, key, value):
+	def __getitem__(self, key: str) -> Any:
+		return super().__getitem__(key)
+
+	def get(self, key: str, default: Any = None) -> Any:
+		return super().get(key, default)
+
+	def __setattr__(self, key: str, value: Any) -> None:
 		self[key] = value
-	#end define
 
-	def __getattr__(self, key: str):
+	def __getattr__(self, key: str) -> Any:
 		return self.get(key)
-	#end define
-#end class
 
 
 class bcolors:
