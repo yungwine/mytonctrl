@@ -5,7 +5,6 @@ __all__ = [
     "Dict",
     "MyPyClass",
     "parse",
-    "ping",
     "get_request",
     "b2mb",
     "search_file_in_dir",

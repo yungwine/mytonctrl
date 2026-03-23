@@ -90,7 +90,8 @@ class bcolors:
 	BOLD = bold
 	UNDERLINE = underline
 
-	def get_args(*args):
+	@staticmethod
+	def get_args(*args: Any) -> str:
 		text = ""
 		for item in args:
 			if item is None:
@@ -99,43 +100,50 @@ class bcolors:
 		return text
 	#end define
 
-	def magenta_text(*args):
+	@staticmethod
+	def magenta_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.magenta + text + bcolors.endc
 		return text
 	#end define
 
-	def blue_text(*args):
+	@staticmethod
+	def blue_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.blue + text + bcolors.endc
 		return text
 	#end define
 
-	def green_text(*args):
+	@staticmethod
+	def green_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.green + text + bcolors.endc
 		return text
 	#end define
 
-	def yellow_text(*args):
+	@staticmethod
+	def yellow_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.yellow + text + bcolors.endc
 		return text
 	#end define
 
-	def red_text(*args):
+	@staticmethod
+	def red_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.red + text + bcolors.endc
 		return text
 	#end define
 
-	def bold_text(*args):
+	@staticmethod
+	def bold_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.bold + text + bcolors.endc
 		return text
 	#end define
 
-	def underline_text(*args):
+	@staticmethod
+	def underline_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.underline + text + bcolors.endc
 		return text
@@ -725,9 +733,9 @@ class MyPyClass:
 	def init_translator(self, file_path: str | None = None) -> None:
 		if file_path is None:
 			file_path = self.db.translate_file_path
-		file = open(file_path, encoding="utf-8")
-		text = file.read()
-		file.close()
+		assert file_path is not None
+		with open(file_path, encoding="utf-8") as file:
+			text = file.read()
 		self.translate_dict = json.loads(text)
 	#end define
 
@@ -767,15 +775,6 @@ def parse(text: str | None, search: str | None, search2: str | None = None) -> s
 	if search2 is not None and search2 in text:
 		text = text[:text.find(search2)]
 	return text
-#end define
-
-def ping(hostname: str) -> bool:
-	process = subprocess.run(["ping", "-c", 1, "-w", 3, hostname], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-	if process.returncode == 0:
-		result = True
-	else:
-		result = False
-	return result
 #end define
 
 def get_request(url: str) -> str:
@@ -875,18 +874,14 @@ def get_load_avg() -> list[float]:
 		if m:
 			loadavg_arr = [m.group(1), m.group(2), m.group(3)]
 		else:
-			loadavg_arr = [0.00, 0.00, 0.00]
+			loadavg_arr = ["0.00", "0.00", "0.00"]
 	else:
 		file = open("/proc/loadavg")
 		loadavg = file.read()
 		file.close()
 		loadavg_arr = loadavg.split(' ')
 
-	output = loadavg_arr[:3]
-	for i in range(len(output)):
-		output[i] = float(output[i])
-	return output
-#end define
+	return [float(item) for item in loadavg_arr[:3]]
 
 def get_internet_interface_name() -> str:
 	if platform.system() == "OpenBSD":
@@ -927,6 +922,7 @@ def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False
 	'just now', etc
 	"""
 	now = date_time_library.datetime.now()
+	diff = date_time_library.timedelta(0)
 	if type(timestamp) is int:
 		diff = now - date_time_library.datetime.fromtimestamp(timestamp)
 	elif isinstance(timestamp, date_time_library.datetime):
@@ -1217,7 +1213,7 @@ def get_git_branch(git_path: str) -> str | None:
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
-		return
+		return None
 	lines = output.split('\n')
 	branch = None
 	for line in lines:
@@ -1230,6 +1226,8 @@ def get_git_branch(git_path: str) -> str | None:
 
 def check_git_update(git_path: str) -> bool | None:
 	branch = get_git_branch(git_path)
+	if branch is None:
+		return None
 	new_hash = get_git_last_remote_commit(git_path, branch)
 	old_hash = get_git_hash(git_path)
 	result = False
@@ -1254,15 +1252,4 @@ def write_config_to_file(config_path: str, data: Mapping[str, Any]) -> None:
 	file = open(config_path, 'wt')
 	file.write(text)
 	file.close()
-#end define
-
-def get_own_ip() -> str:
-	pat = re.compile(r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$")
-	requests.packages.urllib3.util.connection.HAS_IPV6 = False
-	ip = requests.get("https://ifconfig.me/ip").text
-	if not pat.fullmatch(ip):
-		ip = requests.get("https://ipinfo.io/ip").text
-		if not pat.fullmatch(ip):
-			raise Exception('Cannot get own IP address')
-	return ip
 #end define
