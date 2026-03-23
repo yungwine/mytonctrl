@@ -163,7 +163,6 @@ class MyPyClass:
 		self.buffer: Dict = Dict()
 
 		self.my_name: str = self.get_my_name()
-		self.my_dir: str = self.get_my_dir()
 		self.my_full_name: str = self.get_my_full_name()
 		self.my_path: str = self.get_my_path()
 		self.my_work_dir: str = self.get_my_work_dir()
@@ -329,15 +328,6 @@ class MyPyClass:
 		'''return "/some_dir/test.py"'''
 		my_path = os.path.abspath(self.file)
 		return my_path
-	#end define
-
-	def get_my_dir(self):
-		'''return "/some_dir/"'''
-		my_path = self.get_my_path()
-		# my_dir = my_path[:my_path.rfind('/')+1]
-		my_dir = os.path.dirname(my_path)
-		my_dir = dir(my_dir)
-		return my_dir
 	#end define
 
 	def get_my_work_dir(self):
