@@ -4,10 +4,44 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 
-def test_benchmark_uv_not_installed(cli, monkeypatch):
+def test_benchmark_uv_not_installed_decline(cli, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr("builtins.input", lambda prompt: "n")
+
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda args, **kw: calls.append(args))
+
+    cli.execute("benchmark", no_color=True)
+    assert len(calls) == 0
+
+
+def test_benchmark_uv_not_installed_install(cli, monkeypatch):
+    installed = {"uv": False}
+
+    def fake_which(name):
+        if name == "uv" and installed["uv"]:
+            return "/usr/bin/uv"
+        return None
+
+    monkeypatch.setattr(shutil, "which", fake_which)
+    monkeypatch.setattr("builtins.input", lambda prompt: "y")
+
+    calls = []
+
+    def fake_subprocess_run(args, **kwargs):
+        calls.append([str(a) for a in args])
+        if args[:2] == ["sh", "/tmp/uv_install.sh"]:
+            installed["uv"] = True
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
+
+    from mytonctrl import mytonctrl as mytonctrl_module
+    monkeypatch.setattr(mytonctrl_module, "get_service_status", lambda name: True)
+
     output = cli.execute("benchmark", no_color=True)
-    assert "uv is not installed" in output
+    assert calls[0] == ["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o", "/tmp/uv_install.sh"]
+    assert calls[1] == ["sh", "/tmp/uv_install.sh"]
 
 
 def test_benchmark_validator_running(cli, monkeypatch):
