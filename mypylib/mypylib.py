@@ -331,24 +331,21 @@ class MyPyClass:
 	#end define
 
 	def get_my_work_dir(self):
-		'''return "/usr/local/bin/test/" or "/home/user/.local/share/test/"'''
 		if self.check_root_permission():
-			# https://ru.wikipedia.org/wiki/FHS
-			program_files_dir = "/usr/local/bin/"
+			program_files_dir = "/usr/local/bin"
 		else:
-			# https://habr.com/ru/post/440620/
-			user_home_dir = dir(os.getenv("HOME"))
-			program_files_dir = dir(os.getenv("XDG_DATA_HOME", user_home_dir + ".local/share/"))
-		my_work_dir = dir(program_files_dir + self.my_name)
+			program_files_dir = os.getenv("XDG_DATA_HOME")
+			if not program_files_dir:
+				user_home_dir = os.getenv("HOME")
+				if user_home_dir is None:
+					raise Exception("HOME environment variable is not set")
+				program_files_dir = os.path.join(user_home_dir, ".local", "share")
+		my_work_dir = os.path.join(program_files_dir, self.my_name, "")
 		return my_work_dir
-	#end define
 
 	def get_my_temp_dir(self):
-		'''return "/tmp/test/"'''
-		temp_files_dir = "/tmp/"  # https://ru.wikipedia.org/wiki/FHS
-		my_temp_dir = dir(temp_files_dir + self.my_name)
+		my_temp_dir = os.path.join("/tmp", self.my_name, "")
 		return my_temp_dir
-	#end define
 
 	def get_lang(self):
 		lang = os.getenv("LANG", "en")
@@ -786,12 +783,6 @@ def get_request(url: str) -> str:
 	data = link.read()
 	text = data.decode("utf-8")
 	return text
-#end define
-
-def dir(input_dir: str) -> str:
-	if input_dir[-1:] != '/':
-		input_dir += '/'
-	return input_dir
 #end define
 
 def b2mb(item: int | str) -> float:

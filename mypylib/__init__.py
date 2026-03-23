@@ -7,7 +7,6 @@ __all__ = [
     "parse",
     "ping",
     "get_request",
-    "dir",
     "b2mb",
     "search_file_in_dir",
     "search_dir_in_dir",
