@@ -59,10 +59,10 @@ class MyTonCore():
 			self.local.load_db(self.dbFile)
 
 		if not self.walletsDir:
-			self.walletsDir = self.local.buffer.my_work_dir + "wallets/"
-		self.contractsDir = self.local.buffer.my_work_dir + "contracts/"
-		self.poolsDir = self.local.buffer.my_work_dir + "pools/"
-		self.tempDir = self.local.buffer.my_temp_dir
+			self.walletsDir = self.local.my_work_dir + "wallets/"
+		self.contractsDir = self.local.my_work_dir + "contracts/"
+		self.poolsDir = self.local.my_work_dir + "pools/"
+		self.tempDir = self.local.my_temp_dir
 
 		self.nodeName = self.local.db.get("nodeName")
 		if self.nodeName is None:
@@ -101,7 +101,7 @@ class MyTonCore():
 	#end define
 
 	def CheckConfigFile(self, fift, liteClient):
-		mconfig_path = self.local.buffer.db_path
+		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
 		if fift is None or liteClient is None:
 			self.local.add_log("The config file is broken", "warning")
@@ -118,7 +118,7 @@ class MyTonCore():
 
 	def create_self_db_backup(self):
 		self.local.add_log("Create backup config file", "info")
-		mconfig_path = self.local.buffer.db_path
+		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
 		backup_tmp_path = backup_path + '.tmp'
 		subprocess.run(["cp", mconfig_path, backup_tmp_path])
@@ -1824,7 +1824,7 @@ class MyTonCore():
 
 	def GetOverlaysStats(self):
 		self.local.add_log("start GetOverlaysStats function", "debug")
-		resultFilePath = self.local.buffer.my_temp_dir + "getoverlaysstats.json"
+		resultFilePath = self.local.my_temp_dir + "getoverlaysstats.json"
 		result = self.validatorConsole.Run(f"getoverlaysstatsjson {resultFilePath}")
 		if "wrote stats" not in result:
 			raise Exception(f"GetOverlaysStats error: {result}")
@@ -1901,7 +1901,7 @@ class MyTonCore():
 		#end if
 
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
+		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
 			fiftScript = "wallet.fif"
 			args = [fiftScript, wallet.path, dest, seqno, coins, "-m", mode, resultFilePath]
@@ -1932,7 +1932,7 @@ class MyTonCore():
 			return
 		#end if
 
-		orderFilePath = self.local.buffer.my_temp_dir + wallet.name + "_order.txt"
+		orderFilePath = self.local.my_temp_dir + wallet.name + "_order.txt"
 		lines = list()
 		for dest, coins in destList:
 			lines.append("SEND {dest} {coins}".format(dest=dest, coins=coins))
@@ -1946,7 +1946,7 @@ class MyTonCore():
 		elif "v2" in wallet.version:
 			fiftScript = "highload-wallet-v2.fif"
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
+		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
 		args = [fiftScript, wallet.path, wallet.subwallet, seqno, orderFilePath, resultFilePath]
 		if flags:
 			args += flags
@@ -3401,7 +3401,7 @@ class MyTonCore():
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetValidatorWallet()
-		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
+		bocPath = self.local.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
 		self.fift.Run(args)

@@ -153,19 +153,40 @@ class MyPyClass:
 		self.db: Dict = Dict()
 		self.db.config = Dict()
 
-		self.buffer: Dict = Dict()
-		self.buffer.old_db = Dict()
-		self.buffer.log_list = list()
-		self.buffer.thread_count = None
-		self.buffer.memory_using = None
-		self.buffer.free_space_memory = None
+		self.old_db = Dict()
+		self.log_list = list()
+		self.thread_count: int | None = None
+		self.thread_count_old: int | None = None
+		self.memory_using: float | None = None
+		self.free_space_memory: float | None = None
 
-		self.refresh()
+		self.buffer: Dict = Dict()
+
+		self.my_name: str = self.get_my_name()
+		self.my_dir: str = self.get_my_dir()
+		self.my_full_name: str = self.get_my_full_name()
+		self.my_path: str = self.get_my_path()
+		self.my_work_dir: str = self.get_my_work_dir()
+		self.my_temp_dir: str = self.get_my_temp_dir()
+		self.log_file_name: str = self.my_work_dir + self.my_name + ".log"
+		self.db_path: str = self.my_work_dir + self.my_name + ".db"
+		self.pid_file_path: str = self.my_work_dir + self.my_name + ".pid"
+
+		self.translate_dict: dict | None = None
+
+		os.makedirs(self.my_work_dir, exist_ok=True)
+		os.makedirs(self.my_temp_dir, exist_ok=True)
+
+		self.load_db()
+		self.set_default_config()
+
+		# Remove old log file
+		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.log_file_name):
+			os.remove(self.log_file_name)
 
 		# Catch the shutdown signal
 		signal.signal(signal.SIGINT, self.exit)
 		signal.signal(signal.SIGTERM, self.exit)
-	#end define
 
 	def start_service(self, service_name: str, sleep: int = 1) -> None:
 		self.add_log(f"Start/restart {service_name} service", "debug")
@@ -181,36 +202,6 @@ class MyPyClass:
 		args = ["systemctl", "stop", service_name]
 		subprocess.run(args)
 	# end define
-
-	def refresh(self) -> None:
-		# Get program, log and database file name
-		user = get_username()
-		my_name = self.get_my_name()
-		my_work_dir = self.get_my_work_dir()
-		self.buffer.my_name = my_name
-		self.buffer.my_dir = self.get_my_dir()
-		self.buffer.my_full_name = self.get_my_full_name()
-		self.buffer.my_path = self.get_my_path()
-		self.buffer.my_work_dir = my_work_dir
-		self.buffer.my_temp_dir = self.get_my_temp_dir()
-		self.buffer.log_file_name = my_work_dir + my_name + ".log"
-		self.buffer.db_path = my_work_dir + my_name + ".db"
-		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
-		self.buffer.venvs_dir = f"/home/{user}/.local/venv"
-
-		# Check all directorys
-		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
-		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
-
-		# Load local database
-		self.load_db()
-		self.set_default_config()
-
-		# Remove old log file
-		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
-			os.remove(self.buffer.log_file_name)
-		#end if
-	#end define
 
 	def run(self) -> None:
 		# Check args
@@ -238,10 +229,10 @@ class MyPyClass:
 			self.start_cycle(self.write_log, sec=1)
 		if self.db.config.isLocaldbSaving is True:
 			self.start_cycle(self.save_db, sec=1)
-		self.buffer.thread_count_old = threading.active_count()
+		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log(f"Start program `{self.buffer.my_path}`")
+		self.add_log(f"Start program `{self.my_path}`")
 	#end define
 
 	def set_default_config(self):
@@ -266,7 +257,7 @@ class MyPyClass:
 	#end define
 
 	def start_only_one_process(self):
-		pid_file_path = self.buffer.pid_file_path
+		pid_file_path = self.pid_file_path
 		if os.path.isfile(pid_file_path):
 			file = open(pid_file_path, 'r')
 			pid_str = file.read()
@@ -277,7 +268,7 @@ class MyPyClass:
 				full_process_name = " ".join(process.cmdline())
 			except:
 				full_process_name = ""
-			if full_process_name.find(self.buffer.my_full_name) > -1:
+			if full_process_name.find(self.my_full_name) > -1:
 				print("The process is already running")
 				sys.exit(1)
 		#end if
@@ -287,7 +278,7 @@ class MyPyClass:
 	def write_pid(self):
 		pid = os.getpid()
 		pid_str = str(pid)
-		pid_file_path = self.buffer.pid_file_path
+		pid_file_path = self.pid_file_path
 		with open(pid_file_path, 'w') as file:
 			file.write(pid_str)
 	#end define
@@ -297,19 +288,19 @@ class MyPyClass:
 		memory_using = b2mb(process.memory_info().rss)
 		free_space_memory = b2mb(psutil.virtual_memory().available)
 		thread_count = threading.active_count()
-		self.buffer.free_space_memory = free_space_memory
-		self.buffer.memory_using = memory_using
-		self.buffer.thread_count = thread_count
+		self.free_space_memory = free_space_memory
+		self.memory_using = memory_using
+		self.thread_count = thread_count
 		if memory_using > self.db.config.memoryUsinglimit:
 			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
 	#end define
 
 	def print_self_testing_result(self):
-		thread_count_old = self.buffer.thread_count_old
-		thread_count_new = self.buffer.thread_count
-		memory_using = self.buffer.memory_using
-		free_space_memory = self.buffer.free_space_memory
+		thread_count_old = self.thread_count_old
+		thread_count_new = self.thread_count
+		memory_using = self.memory_using
+		free_space_memory = self.free_space_memory
 		self.add_log(color_text("{blue}Self testing informatinon:{endc}"))
 		self.add_log(f"Threads: {thread_count_new} -> {thread_count_old}")
 		self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb")
@@ -329,7 +320,6 @@ class MyPyClass:
 	#end define
 
 	def get_my_name(self):
-		'''return "test"'''
 		my_full_name = self.get_my_full_name()
 		my_name = my_full_name[:my_full_name.rfind('.')]
 		return my_name
@@ -359,16 +349,14 @@ class MyPyClass:
 			# https://habr.com/ru/post/440620/
 			user_home_dir = dir(os.getenv("HOME"))
 			program_files_dir = dir(os.getenv("XDG_DATA_HOME", user_home_dir + ".local/share/"))
-		my_name = self.get_my_name()
-		my_work_dir = dir(program_files_dir + my_name)
+		my_work_dir = dir(program_files_dir + self.my_name)
 		return my_work_dir
 	#end define
 
 	def get_my_temp_dir(self):
 		'''return "/tmp/test/"'''
 		temp_files_dir = "/tmp/"  # https://ru.wikipedia.org/wiki/FHS
-		my_name = self.get_my_name()
-		my_temp_dir = dir(temp_files_dir + my_name)
+		my_temp_dir = dir(temp_files_dir + self.my_name)
 		return my_temp_dir
 	#end define
 
@@ -424,18 +412,18 @@ class MyPyClass:
 		log_text = mode_text + time_text + thread_text + input_text
 
 		# Queue for recording
-		self.buffer.log_list.append(log_text)
+		self.log_list.append(log_text)
 
 		# Print log text
 		print(log_text)
 	#end define
 
 	def write_log(self):
-		log_file_name = self.buffer.log_file_name
+		log_file_name = self.log_file_name
 
 		with open(log_file_name, 'a') as file:
-			while len(self.buffer.log_list) > 0:
-				log_text = self.buffer.log_list.pop(0)
+			while len(self.log_list) > 0:
+				log_text = self.log_list.pop(0)
 				file.write(log_text + '\n')
 			#end while
 		#end with
@@ -484,8 +472,8 @@ class MyPyClass:
 
 	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
 		self.working = False
-		if os.path.isfile(self.buffer.pid_file_path):
-			os.remove(self.buffer.pid_file_path)
+		if os.path.isfile(self.pid_file_path):
+			os.remove(self.pid_file_path)
 		self.save()
 		sys.exit(0)
 	#end define
@@ -519,7 +507,7 @@ class MyPyClass:
 	#end define
 
 	def write_db(self, data: Mapping[str, Any]) -> None:
-		db_path = os.path.realpath(self.buffer.db_path)
+		db_path = os.path.realpath(self.db_path)
 		text = json.dumps(data, indent=4)
 		self.lock_file(db_path)
 		try:
@@ -645,9 +633,9 @@ class MyPyClass:
 	#end define
 
 	def save_db(self) -> None:
-		file_data = self.read_db(self.buffer.db_path)
-		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
-		self.buffer.old_db = Dict(self.db)
+		file_data = self.read_db(self.db_path)
+		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.old_db)
+		self.old_db = Dict(self.db)
 		if need_write_local_data:
 			self.write_db(self.db)
 	#end define
@@ -660,13 +648,13 @@ class MyPyClass:
 	def load_db(self, db_path: str | None = None) -> bool:
 		result = False
 		if db_path is None:
-			db_path = self.buffer.db_path
+			db_path = self.db_path
 		if not os.path.isfile(db_path):
 			self.write_db(self.db)
 		try:
 			file_data = self.read_db(db_path)
 			self.db = Dict(file_data)
-			self.buffer.old_db = Dict(file_data)
+			self.old_db = Dict(file_data)
 			self.set_default_config()
 			result = True
 		except Exception as err:
@@ -694,7 +682,7 @@ class MyPyClass:
 	#end define
 
 	def fork_daemon(self) -> None:
-		my_path = self.buffer.my_path
+		my_path = self.my_path
 		python3_path = self.get_python3_path()
 		cmd = " ".join([python3_path, my_path, "-ef", '&'])
 		os.system(cmd)
@@ -704,7 +692,7 @@ class MyPyClass:
 
 	def add_to_crone(self) -> None:
 		python3_path = self.get_python3_path()
-		cron_text = f"@reboot {python3_path} \"{self.buffer.my_path}\" -d\n"
+		cron_text = f"@reboot {python3_path} \"{self.my_path}\" -d\n"
 		os.system("crontab -l > mycron")
 		with open("mycron", 'a') as file:
 			file.write(cron_text)
@@ -753,14 +741,16 @@ class MyPyClass:
 		file = open(file_path, encoding="utf-8")
 		text = file.read()
 		file.close()
-		self.buffer.translate = json.loads(text)
+		self.translate_dict = json.loads(text)
 	#end define
 
 	def translate(self, text: str) -> str:
+		if self.translate_dict is None:
+			return text
 		lang = self.get_lang()
 		text_list = text.split(' ')
 		for item in text_list:
-			sitem = self.buffer.translate.get(item)
+			sitem = self.translate_dict.get(item)
 			if sitem is None:
 				continue
 			ritem = sitem.get(lang)

@@ -427,8 +427,8 @@ def run_benchmark(ton, args):
 	print_table(table)
 #end define
 
-def check_mytonctrl_update(local):
-	git_path = local.buffer.my_dir
+def check_mytonctrl_update(local: MyPyClass):
+	git_path = local.my_dir
 	result = check_git_update(git_path)
 	if result is True:
 		color_print(local.translate("mytonctrl_update_available"))
