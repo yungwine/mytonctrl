@@ -212,9 +212,9 @@ def check_installer_user(local):
 
 def pre_up(local: MyPyClass, ton: MyTonCore):
 	try:
-		check_mytonctrl_update(local)
-		check_installer_user(local)
-		check_vport(local, ton)
+		local.try_function(check_mytonctrl_update, args=[local])
+		local.try_function(check_installer_user, args=[local])
+		local.try_function(check_vport, args=[local, ton])
 		warnings(local, ton)
 	except Exception as e:
 		local.add_log(f'PreUp error: {e}', 'error')
@@ -428,9 +428,9 @@ def run_benchmark(ton, args):
 #end define
 
 def check_mytonctrl_update(local: MyPyClass):
-	git_path = local.my_dir
+	git_path = '/usr/src/mytonctrl'
 	result = check_git_update(git_path)
-	if result is True:
+	if result:
 		color_print(local.translate("mytonctrl_update_available"))
 
 def print_warning(local, warning_name: str):
