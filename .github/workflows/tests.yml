@@ -44,7 +44,7 @@ jobs:
       - name: Run Pyright
         run: |
           pip install pyright
-          pyright mypylib mypyconsole  # wip support whole project
+          pyright mypylib mypyconsole mytoncore/models.py  # wip support whole project
 
       - name: Run pytest
         run: |
