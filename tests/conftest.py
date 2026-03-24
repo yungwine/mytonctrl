@@ -108,7 +108,7 @@ class TestMyPyConsole(MyPyConsole):
 
 @pytest.fixture()
 def cli(local, ton) -> TestMyPyConsole:
-    console = TestMyPyConsole()
+    console = TestMyPyConsole(local)
     mp = pytest.MonkeyPatch()
     mp.setattr(MyTonCore, "using_pool", lambda self: True)
     mp.setattr(MyTonCore, "using_nominator_pool", lambda self: True)

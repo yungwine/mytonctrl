@@ -1070,6 +1070,6 @@ def mytonctrl():
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
 	ton = MyTonCore(mytoncore_local)
-	console = MyPyConsole()
+	console = MyPyConsole(local)
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()
