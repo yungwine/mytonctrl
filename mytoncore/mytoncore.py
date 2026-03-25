@@ -975,7 +975,7 @@ class MyTonCore():
 		return output
 	#end define
 
-	def AddAdnlAddrToValidator(self, adnlAddr):
+	def AddAdnlAddrToValidator(self, adnlAddr: str):
 		self.local.add_log("start AddAdnlAddrToValidator function", "debug")
 		output = False
 		result = self.validatorConsole.Run("addadnl {adnlAddr} 0".format(adnlAddr=adnlAddr))
@@ -1605,7 +1605,7 @@ class MyTonCore():
 		file.close()
 	#ned define
 
-	def CreateWallet(self, name, workchain=0, version="v1", **kwargs):
+	def CreateWallet(self, name: str, workchain=0, version="v1", **kwargs):
 		self.local.add_log("start CreateWallet function", "debug")
 		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwallet_default)
@@ -3083,7 +3083,7 @@ class MyTonCore():
 			from mytoninstaller.settings import enable_ton_http_api
 			enable_ton_http_api(self.local)
 
-	def enable_mode(self, name):
+	def enable_mode(self, name: str):
 		if name not in MODES:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
 		MODES[name].check_enable(self)
@@ -3091,7 +3091,7 @@ class MyTonCore():
 		current_modes[name] = True
 		self.local.save()
 
-	def disable_mode(self, name):
+	def disable_mode(self, name: str):
 		current_modes = self.get_modes()
 		if name not in current_modes:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
