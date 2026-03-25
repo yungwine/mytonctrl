@@ -374,7 +374,7 @@ class MyPyClass:
 		return result
 	#end define
 
-	def add_log(self, input_text, mode=INFO):
+	def add_log(self, input_text: str, mode=INFO):
 		input_text = f"{input_text}"
 		time_text = date_time_library.datetime.utcnow().strftime("%d.%m.%Y, %H:%M:%S.%f")[:-3]
 		time_text = "{0} (UTC)".format(time_text).ljust(32, ' ')

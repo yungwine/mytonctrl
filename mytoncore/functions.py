@@ -25,13 +25,6 @@ from mytoninstaller.node_args import get_node_args
 
 
 def Init(local):
-    # Event reaction
-    if ("-e" in sys.argv):
-        x = sys.argv.index("-e")
-        event_name = sys.argv[x+1]
-        Event(local, event_name)
-    # end if
-
     local.run()
 
     # statistics
@@ -45,71 +38,6 @@ def Init(local):
     local.buffer.prevShardsBlock = dict()
     local.buffer.blocksNum = 0
     local.buffer.transNum = 0
-# end define
-
-
-def Event(local, event_name):
-    if event_name == "enableVC":
-        EnableVcEvent(local)
-    elif event_name == "validator down":
-        ValidatorDownEvent(local)
-    elif event_name.startswith("enable_mode"):
-        enable_mode(local, event_name)
-    elif event_name == "enable_btc_teleport":
-        enable_btc_teleport(local)
-    elif event_name.startswith("setup_collator"):
-        setup_collator(local, event_name)
-    local.exit()
-# end define
-
-
-def EnableVcEvent(local):
-    local.add_log("start EnableVcEvent function", "debug")
-    # Создать новый кошелек для валидатора
-    ton = MyTonCore(local)
-    wallet = ton.CreateWallet("validator_wallet_001", -1)
-    local.db["validatorWalletName"] = wallet.name
-
-    # Создать новый ADNL адрес для валидатора
-    adnlAddr = ton.CreateNewKey()
-    ton.AddAdnlAddrToValidator(adnlAddr)
-    local.db["adnlAddr"] = adnlAddr
-
-    # Сохранить
-    local.save()
-# end define
-
-
-def ValidatorDownEvent(local):
-    local.add_log("start ValidatorDownEvent function", "debug")
-    local.add_log("Validator is down", "error")
-# end define
-
-
-def enable_mode(local, event_name: str):
-    ton = MyTonCore(local)
-    mode = event_name.split("_")[-1]
-    if mode in ("liteserver", "collator"):
-        ton.disable_mode('validator')
-    ton.enable_mode(mode)
-#end define
-
-def enable_btc_teleport(local):
-    local.add_log("start enable_btc_teleport function", "debug")
-    ton = MyTonCore(local)
-    if not ton.using_validator():
-        local.add_log("Skip installing BTC Teleport as node is not a validator", "info")
-        return
-    from modules.btc_teleport import BtcTeleportModule
-    BtcTeleportModule(ton, local).init(reinstall=True)
-
-
-def setup_collator(local, event_name: str):
-    local.add_log("start setup_collator function", "debug")
-    ton = MyTonCore(local)
-    from modules.collator import CollatorModule
-    shards = event_name.split("_")[2:]
-    CollatorModule(ton, local).setup_collator(shards)
 
 
 def Elections(local, ton):
