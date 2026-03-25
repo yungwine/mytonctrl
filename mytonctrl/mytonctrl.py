@@ -212,9 +212,9 @@ def check_installer_user(local):
 
 def pre_up(local: MyPyClass, ton: MyTonCore):
 	try:
-		check_mytonctrl_update(local)
-		check_installer_user(local)
-		check_vport(local, ton)
+		local.try_function(check_mytonctrl_update, args=[local])
+		local.try_function(check_installer_user, args=[local])
+		local.try_function(check_vport, args=[local, ton])
 		warnings(local, ton)
 	except Exception as e:
 		local.add_log(f'PreUp error: {e}', 'error')
@@ -275,6 +275,8 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 
 	if '--url' in input_args:
 		git_url = pop_arg_from_args(input_args, '--url')
+		if not git_url:
+			raise Exception("git url is empty after --url flag")
 		if branch is None:
 			if '#' in git_url:
 				ref_fragment = git_url.rsplit('#', 1)[1]
@@ -425,10 +427,10 @@ def run_benchmark(ton, args):
 	print_table(table)
 #end define
 
-def check_mytonctrl_update(local):
-	git_path = local.buffer.my_dir
+def check_mytonctrl_update(local: MyPyClass):
+	git_path = '/usr/src/mytonctrl'
 	result = check_git_update(git_path)
-	if result is True:
+	if result:
 		color_print(local.translate("mytonctrl_update_available"))
 
 def print_warning(local, warning_name: str):
@@ -1068,6 +1070,6 @@ def mytonctrl():
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
 	ton = MyTonCore(mytoncore_local)
-	console = MyPyConsole()
+	console = MyPyConsole(local)
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()

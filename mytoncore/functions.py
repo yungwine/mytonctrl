@@ -687,14 +687,14 @@ def backup_mytoncore_logs(local: MyPyClass, ton: MyTonCore):
             return
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     log_backup_tmp_path = os.path.join(logs_path, 'mytoncore_log_' + now + '.log')
-    subprocess.run(["cp", local.buffer.log_file_name, log_backup_tmp_path])
+    subprocess.run(["cp", local.log_file_name, log_backup_tmp_path])
     ton.clear_dir(logs_path)
 
 
 def check_mytoncore_db(local: MyPyClass, ton: MyTonCore):
     try:
-        local.read_db(local.buffer.db_path)
-        backup_path = local.buffer.db_path + ".backup"
+        local.read_db(local.db_path)
+        backup_path = local.db_path + ".backup"
         if not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600*6:
             ton.create_self_db_backup()
         return
@@ -757,6 +757,6 @@ def mytoncore():
     from mypylib.mypylib import MyPyClass
 
     local = MyPyClass('mytoncore.py')
-    print('Local DB path:', local.buffer.db_path)
+    print('Local DB path:', local.db_path)
     Init(local)
     General(local)

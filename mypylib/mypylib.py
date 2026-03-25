@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf_8 -*-
+from __future__ import annotations
 
 import os
 import re
@@ -20,6 +19,8 @@ import requests
 import threading
 import subprocess
 import datetime as date_time_library
+from types import FrameType
+from typing import Any, Callable, Literal, Mapping, Sequence
 from urllib.request import urlopen
 from urllib.error import URLError
 
@@ -28,40 +29,43 @@ WARNING = "warning"
 ERROR = "error"
 DEBUG = "debug"
 
+Callback = Callable[..., Any]
+
 
 class Dict(dict):
-	def __init__(self, *args, **kwargs):
+
+	def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
 		for item in args:
 			self._parse_dict(item)
 		self._parse_dict(kwargs)
-	#end define
 
-	def _parse_dict(self, d):
+	def _parse_dict(self, d: Mapping[str, Any]) -> None:
 		for key, value in d.items():
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			if type(value) == list:
 				value = self._parse_list(value)
 			self[key] = value
-	#end define
 
-	def _parse_list(self, lst):
+	def _parse_list(self, lst: list[Any]) -> list[Any]:
 		result = list()
 		for value in lst:
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			result.append(value)
 		return result
-	#end define
 
-	def __setattr__(self, key, value):
+	def __getitem__(self, key: str) -> Any:
+		return super().__getitem__(key)
+
+	def get(self, key: str, default: Any = None) -> Any:
+		return super().get(key, default)
+
+	def __setattr__(self, key: str, value: Any) -> None:
 		self[key] = value
-	#end define
 
-	def __getattr__(self, key):
+	def __getattr__(self, key: str) -> Any:
 		return self.get(key)
-	#end define
-#end class
 
 
 class bcolors:
@@ -86,7 +90,8 @@ class bcolors:
 	BOLD = bold
 	UNDERLINE = underline
 
-	def get_args(*args):
+	@staticmethod
+	def get_args(*args: Any) -> str:
 		text = ""
 		for item in args:
 			if item is None:
@@ -95,43 +100,50 @@ class bcolors:
 		return text
 	#end define
 
-	def magenta_text(*args):
+	@staticmethod
+	def magenta_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.magenta + text + bcolors.endc
 		return text
 	#end define
 
-	def blue_text(*args):
+	@staticmethod
+	def blue_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.blue + text + bcolors.endc
 		return text
 	#end define
 
-	def green_text(*args):
+	@staticmethod
+	def green_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.green + text + bcolors.endc
 		return text
 	#end define
 
-	def yellow_text(*args):
+	@staticmethod
+	def yellow_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.yellow + text + bcolors.endc
 		return text
 	#end define
 
-	def red_text(*args):
+	@staticmethod
+	def red_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.red + text + bcolors.endc
 		return text
 	#end define
 
-	def bold_text(*args):
+	@staticmethod
+	def bold_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.bold + text + bcolors.endc
 		return text
 	#end define
 
-	def underline_text(*args):
+	@staticmethod
+	def underline_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.underline + text + bcolors.endc
 		return text
@@ -143,27 +155,47 @@ class bcolors:
 
 
 class MyPyClass:
-	def __init__(self, file):
-		self.working = True
-		self.file = file
-		self.db = Dict()
+	def __init__(self, file: str) -> None:
+		self.working: bool = True
+		self.file: str = file
+		self.db: Dict = Dict()
 		self.db.config = Dict()
 
-		self.buffer = Dict()
-		self.buffer.old_db = Dict()
-		self.buffer.log_list = list()
-		self.buffer.thread_count = None
-		self.buffer.memory_using = None
-		self.buffer.free_space_memory = None
+		self.old_db = Dict()
+		self.log_list = list()
+		self.thread_count: int | None = None
+		self.thread_count_old: int | None = None
+		self.memory_using: float | None = None
+		self.free_space_memory: float | None = None
 
-		self.refresh()
+		self.buffer: Dict = Dict()
+
+		self.my_name: str = self.get_my_name()
+		self.my_full_name: str = self.get_my_full_name()
+		self.my_path: str = self.get_my_path()
+		self.my_work_dir: str = self.get_my_work_dir()
+		self.my_temp_dir: str = self.get_my_temp_dir()
+		self.log_file_name: str = self.my_work_dir + self.my_name + ".log"
+		self.db_path: str = self.my_work_dir + self.my_name + ".db"
+		self.pid_file_path: str = self.my_work_dir + self.my_name + ".pid"
+
+		self.translate_dict: dict | None = None
+
+		os.makedirs(self.my_work_dir, exist_ok=True)
+		os.makedirs(self.my_temp_dir, exist_ok=True)
+
+		self.load_db()
+		self.set_default_config()
+
+		# Remove old log file
+		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.log_file_name):
+			os.remove(self.log_file_name)
 
 		# Catch the shutdown signal
 		signal.signal(signal.SIGINT, self.exit)
 		signal.signal(signal.SIGTERM, self.exit)
-	#end define
 
-	def start_service(self, service_name: str, sleep: int = 1):
+	def start_service(self, service_name: str, sleep: int = 1) -> None:
 		self.add_log(f"Start/restart {service_name} service", "debug")
 		args = ["systemctl", "restart", service_name]
 		subprocess.run(args)
@@ -172,43 +204,13 @@ class MyPyClass:
 		time.sleep(sleep)
 	# end define
 
-	def stop_service(self, service_name: str):
+	def stop_service(self, service_name: str) -> None:
 		self.add_log(f"Stop {service_name} service", "debug")
 		args = ["systemctl", "stop", service_name]
 		subprocess.run(args)
 	# end define
 
-	def refresh(self):
-		# Get program, log and database file name
-		user = get_username()
-		my_name = self.get_my_name()
-		my_work_dir = self.get_my_work_dir()
-		self.buffer.my_name = my_name
-		self.buffer.my_dir = self.get_my_dir()
-		self.buffer.my_full_name = self.get_my_full_name()
-		self.buffer.my_path = self.get_my_path()
-		self.buffer.my_work_dir = my_work_dir
-		self.buffer.my_temp_dir = self.get_my_temp_dir()
-		self.buffer.log_file_name = my_work_dir + my_name + ".log"
-		self.buffer.db_path = my_work_dir + my_name + ".db"
-		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
-		self.buffer.venvs_dir = f"/home/{user}/.local/venv"
-
-		# Check all directorys
-		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
-		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
-
-		# Load local database
-		self.load_db()
-		self.set_default_config()
-
-		# Remove old log file
-		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
-			os.remove(self.buffer.log_file_name)
-		#end if
-	#end define
-
-	def run(self):
+	def run(self) -> None:
 		# Check args
 		if "-ef" in sys.argv:
 			file = open(os.devnull, 'w')
@@ -234,10 +236,10 @@ class MyPyClass:
 			self.start_cycle(self.write_log, sec=1)
 		if self.db.config.isLocaldbSaving is True:
 			self.start_cycle(self.save_db, sec=1)
-		self.buffer.thread_count_old = threading.active_count()
+		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log(f"Start program `{self.buffer.my_path}`")
+		self.add_log(f"Start program `{self.my_path}`")
 	#end define
 
 	def set_default_config(self):
@@ -262,7 +264,7 @@ class MyPyClass:
 	#end define
 
 	def start_only_one_process(self):
-		pid_file_path = self.buffer.pid_file_path
+		pid_file_path = self.pid_file_path
 		if os.path.isfile(pid_file_path):
 			file = open(pid_file_path, 'r')
 			pid_str = file.read()
@@ -273,7 +275,7 @@ class MyPyClass:
 				full_process_name = " ".join(process.cmdline())
 			except:
 				full_process_name = ""
-			if full_process_name.find(self.buffer.my_full_name) > -1:
+			if full_process_name.find(self.my_full_name) > -1:
 				print("The process is already running")
 				sys.exit(1)
 		#end if
@@ -283,7 +285,7 @@ class MyPyClass:
 	def write_pid(self):
 		pid = os.getpid()
 		pid_str = str(pid)
-		pid_file_path = self.buffer.pid_file_path
+		pid_file_path = self.pid_file_path
 		with open(pid_file_path, 'w') as file:
 			file.write(pid_str)
 	#end define
@@ -293,19 +295,19 @@ class MyPyClass:
 		memory_using = b2mb(process.memory_info().rss)
 		free_space_memory = b2mb(psutil.virtual_memory().available)
 		thread_count = threading.active_count()
-		self.buffer.free_space_memory = free_space_memory
-		self.buffer.memory_using = memory_using
-		self.buffer.thread_count = thread_count
+		self.free_space_memory = free_space_memory
+		self.memory_using = memory_using
+		self.thread_count = thread_count
 		if memory_using > self.db.config.memoryUsinglimit:
 			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
 	#end define
 
 	def print_self_testing_result(self):
-		thread_count_old = self.buffer.thread_count_old
-		thread_count_new = self.buffer.thread_count
-		memory_using = self.buffer.memory_using
-		free_space_memory = self.buffer.free_space_memory
+		thread_count_old = self.thread_count_old
+		thread_count_new = self.thread_count
+		memory_using = self.memory_using
+		free_space_memory = self.free_space_memory
 		self.add_log(color_text("{blue}Self testing informatinon:{endc}"))
 		self.add_log(f"Threads: {thread_count_new} -> {thread_count_old}")
 		self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb")
@@ -325,7 +327,6 @@ class MyPyClass:
 	#end define
 
 	def get_my_name(self):
-		'''return "test"'''
 		my_full_name = self.get_my_full_name()
 		my_name = my_full_name[:my_full_name.rfind('.')]
 		return my_name
@@ -337,36 +338,22 @@ class MyPyClass:
 		return my_path
 	#end define
 
-	def get_my_dir(self):
-		'''return "/some_dir/"'''
-		my_path = self.get_my_path()
-		# my_dir = my_path[:my_path.rfind('/')+1]
-		my_dir = os.path.dirname(my_path)
-		my_dir = dir(my_dir)
-		return my_dir
-	#end define
-
 	def get_my_work_dir(self):
-		'''return "/usr/local/bin/test/" or "/home/user/.local/share/test/"'''
 		if self.check_root_permission():
-			# https://ru.wikipedia.org/wiki/FHS
-			program_files_dir = "/usr/local/bin/"
+			program_files_dir = "/usr/local/bin"
 		else:
-			# https://habr.com/ru/post/440620/
-			user_home_dir = dir(os.getenv("HOME"))
-			program_files_dir = dir(os.getenv("XDG_DATA_HOME", user_home_dir + ".local/share/"))
-		my_name = self.get_my_name()
-		my_work_dir = dir(program_files_dir + my_name)
+			program_files_dir = os.getenv("XDG_DATA_HOME")
+			if not program_files_dir:
+				user_home_dir = os.getenv("HOME")
+				if user_home_dir is None:
+					raise Exception("HOME environment variable is not set")
+				program_files_dir = os.path.join(user_home_dir, ".local", "share")
+		my_work_dir = os.path.join(program_files_dir, self.my_name, "")
 		return my_work_dir
-	#end define
 
 	def get_my_temp_dir(self):
-		'''return "/tmp/test/"'''
-		temp_files_dir = "/tmp/"  # https://ru.wikipedia.org/wiki/FHS
-		my_name = self.get_my_name()
-		my_temp_dir = dir(temp_files_dir + my_name)
+		my_temp_dir = os.path.join("/tmp", self.my_name, "")
 		return my_temp_dir
-	#end define
 
 	def get_lang(self):
 		lang = os.getenv("LANG", "en")
@@ -420,18 +407,18 @@ class MyPyClass:
 		log_text = mode_text + time_text + thread_text + input_text
 
 		# Queue for recording
-		self.buffer.log_list.append(log_text)
+		self.log_list.append(log_text)
 
 		# Print log text
 		print(log_text)
 	#end define
 
 	def write_log(self):
-		log_file_name = self.buffer.log_file_name
+		log_file_name = self.log_file_name
 
 		with open(log_file_name, 'a') as file:
-			while len(self.buffer.log_list) > 0:
-				log_text = self.buffer.log_list.pop(0)
+			while len(self.log_list) > 0:
+				log_text = self.log_list.pop(0)
 				file.write(log_text + '\n')
 			#end while
 		#end with
@@ -478,26 +465,26 @@ class MyPyClass:
 		return data
 	#end define
 
-	def exit(self, signum=None, frame=None):
+	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
 		self.working = False
-		if os.path.isfile(self.buffer.pid_file_path):
-			os.remove(self.buffer.pid_file_path)
+		if os.path.isfile(self.pid_file_path):
+			os.remove(self.pid_file_path)
 		self.save()
 		sys.exit(0)
 	#end define
 
-	def read_file(self, path):
+	def read_file(self, path: str) -> str:
 		with open(path, 'rt') as file:
 			text = file.read()
 		return text
 	#end define
 
-	def write_file(self, path, text=""):
+	def write_file(self, path: str, text: str = "") -> None:
 		with open(path, 'wt') as file:
 			file.write(text)
 	#end define
 
-	def read_db(self, db_path):
+	def read_db(self, db_path: str) -> Dict:
 		err = None
 		for i in range(10):
 			try:
@@ -508,14 +495,14 @@ class MyPyClass:
 		raise Exception(f"read_db error: {err}")
 	#end define
 
-	def read_db_process(self, db_path):
+	def read_db_process(self, db_path: str) -> Dict:
 		text = self.read_file(db_path)
 		data = json.loads(text)
 		return Dict(data)
 	#end define
 
-	def write_db(self, data: dict):
-		db_path = os.path.realpath(self.buffer.db_path)
+	def write_db(self, data: Mapping[str, Any]) -> None:
+		db_path = os.path.realpath(self.db_path)
 		text = json.dumps(data, indent=4)
 		self.lock_file(db_path)
 		try:
@@ -523,7 +510,7 @@ class MyPyClass:
 		finally:
 			self.unlock_file(db_path)
 
-	def _write_file_atomic(self, path: str, text=""):
+	def _write_file_atomic(self, path: str, text: str = "") -> None:
 		tmp_path = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
 		try:
 			with open(tmp_path, 'wt') as file:
@@ -537,7 +524,7 @@ class MyPyClass:
 				except OSError:
 					pass
 
-	def lock_file(self, path):
+	def lock_file(self, path: str) -> None:
 		pid_path = path + ".lock"
 		for i in range(300):
 			if os.path.isfile(pid_path):
@@ -548,7 +535,7 @@ class MyPyClass:
 		raise Exception("lock_file error: time out.")
 	#end define
 
-	def unlock_file(self, path):
+	def unlock_file(self, path: str) -> None:
 		pid_path = path + ".lock"
 		try:
 			os.remove(pid_path)
@@ -640,29 +627,29 @@ class MyPyClass:
 			raise Exception(f"mtdp_fcfc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
 	#end define
 
-	def save_db(self):
-		file_data = self.read_db(self.buffer.db_path)
-		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
-		self.buffer.old_db = Dict(self.db)
+	def save_db(self) -> None:
+		file_data = self.read_db(self.db_path)
+		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.old_db)
+		self.old_db = Dict(self.db)
 		if need_write_local_data:
 			self.write_db(self.db)
 	#end define
 
-	def save(self):
+	def save(self) -> None:
 		self.save_db()
 		self.write_log()
 	#end define
 
-	def load_db(self, db_path=False):
+	def load_db(self, db_path: str | None = None) -> bool:
 		result = False
-		if not db_path:
-			db_path = self.buffer.db_path
+		if db_path is None:
+			db_path = self.db_path
 		if not os.path.isfile(db_path):
 			self.write_db(self.db)
 		try:
 			file_data = self.read_db(db_path)
 			self.db = Dict(file_data)
-			self.buffer.old_db = Dict(file_data)
+			self.old_db = Dict(file_data)
 			self.set_default_config()
 			result = True
 		except Exception as err:
@@ -670,12 +657,11 @@ class MyPyClass:
 		return result
 	#end define
 
-	def get_settings(self, file_path):
+	def get_settings(self, file_path: str) -> None:
 		try:
-			file = open(file_path)
-			text = file.read()
-			file.close()
-			self.db = json.loads(text)
+			with open(file_path) as file:
+				text = file.read()
+			self.db = Dict(json.loads(text))
 			self.save_db()
 			print("get setting successful: " + file_path)
 			self.exit()
@@ -683,15 +669,15 @@ class MyPyClass:
 			self.add_log(f"get_settings error: {err}", WARNING)
 	#end define
 
-	def get_python3_path(self):
+	def get_python3_path(self) -> str:
 		python3_path = "/usr/bin/python3"
 		if platform.system() == "OpenBSD":
 			python3_path = "/usr/local/bin/python3"
 		return python3_path
 	#end define
 
-	def fork_daemon(self):
-		my_path = self.buffer.my_path
+	def fork_daemon(self) -> None:
+		my_path = self.my_path
 		python3_path = self.get_python3_path()
 		cmd = " ".join([python3_path, my_path, "-ef", '&'])
 		os.system(cmd)
@@ -699,9 +685,9 @@ class MyPyClass:
 		self.exit()
 	#end define
 
-	def add_to_crone(self):
+	def add_to_crone(self) -> None:
 		python3_path = self.get_python3_path()
-		cron_text = f"@reboot {python3_path} \"{self.buffer.my_path}\" -d\n"
+		cron_text = f"@reboot {python3_path} \"{self.my_path}\" -d\n"
 		os.system("crontab -l > mycron")
 		with open("mycron", 'a') as file:
 			file.write(cron_text)
@@ -710,8 +696,7 @@ class MyPyClass:
 		self.exit()
 	#end define
 
-	def try_function(self, func, **kwargs):
-		args = kwargs.get("args")
+	def try_function(self, func: Callback, args: Sequence[Any] | None = None) -> Any:
 		result = None
 		try:
 			if args is None:
@@ -723,9 +708,9 @@ class MyPyClass:
 		return result
 	#end define
 
-	def start_thread(self, func, **kwargs):
-		name = kwargs.get("name", func.__name__)
-		args = kwargs.get("args")
+	def start_thread(self, func: Callback, name: str | None = None, args: Sequence[Any] | None = None) -> None:
+		if name is None:
+			name = func.__name__
 		if args is None:
 			threading.Thread(target=func, name=name, daemon=True).start()
 		else:
@@ -733,33 +718,34 @@ class MyPyClass:
 		self.add_log("Thread {name} started".format(name=name), "debug")
 	#end define
 
-	def cycle(self, func, sec, args):
+	def cycle(self, func: Callback, sec: float, args: Sequence[Any] | None) -> None:
 		while self.working:
 			self.try_function(func, args=args)
 			time.sleep(sec)
 	#end define
 
-	def start_cycle(self, func, **kwargs):
-		name = kwargs.get("name", func.__name__)
-		args = kwargs.get("args")
-		sec = kwargs.get("sec")
+	def start_cycle(self, func: Callback, sec: float, args: Sequence[Any] | None = None, name: str | None = None) -> None:
+		if name is None:
+			name = func.__name__
 		self.start_thread(self.cycle, name=name, args=(func, sec, args))
 	#end define
 
-	def init_translator(self, file_path=None):
+	def init_translator(self, file_path: str | None = None) -> None:
 		if file_path is None:
 			file_path = self.db.translate_file_path
-		file = open(file_path, encoding="utf-8")
-		text = file.read()
-		file.close()
-		self.buffer.translate = json.loads(text)
+		assert file_path is not None
+		with open(file_path, encoding="utf-8") as file:
+			text = file.read()
+		self.translate_dict = json.loads(text)
 	#end define
 
-	def translate(self, text):
+	def translate(self, text: str) -> str:
+		if self.translate_dict is None:
+			return text
 		lang = self.get_lang()
 		text_list = text.split(' ')
 		for item in text_list:
-			sitem = self.buffer.translate.get(item)
+			sitem = self.translate_dict.get(item)
 			if sitem is None:
 				continue
 			ritem = sitem.get(lang)
@@ -769,7 +755,7 @@ class MyPyClass:
 	#end define
 #end class
 
-def get_hash_md5(file_name):
+def get_hash_md5(file_name: str) -> str:
 	blocksize = 65536
 	hasher = hashlib.md5()
 	with open(file_name, 'rb') as file:
@@ -780,7 +766,7 @@ def get_hash_md5(file_name):
 	return hasher.hexdigest()
 #end define
 
-def parse(text, search, search2=None):
+def parse(text: str | None, search: str | None, search2: str | None = None) -> str | None:
 	if search is None or text is None:
 		return None
 	if search not in text:
@@ -791,33 +777,18 @@ def parse(text, search, search2=None):
 	return text
 #end define
 
-def ping(hostname):
-	process = subprocess.run(["ping", "-c", 1, "-w", 3, hostname], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-	if process.returncode == 0:
-		result = True
-	else:
-		result = False
-	return result
-#end define
-
-def get_request(url):
+def get_request(url: str) -> str:
 	link = urlopen(url)
 	data = link.read()
 	text = data.decode("utf-8")
 	return text
 #end define
 
-def dir(input_dir):
-	if input_dir[-1:] != '/':
-		input_dir += '/'
-	return input_dir
-#end define
-
-def b2mb(item):
+def b2mb(item: int | str) -> float:
 	return round(int(item) / 1000 / 1000, 2)
 #end define
 
-def search_file_in_dir(path, file_name):
+def search_file_in_dir(path: str, file_name: str) -> str | None:
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
@@ -834,7 +805,7 @@ def search_file_in_dir(path, file_name):
 	return result
 #end define
 
-def search_dir_in_dir(path, dir_name):
+def search_dir_in_dir(path: str, dir_name: str) -> str | None:
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
@@ -850,15 +821,15 @@ def search_dir_in_dir(path, dir_name):
 	return result
 #end define
 
-def get_dir_from_path(path):
+def get_dir_from_path(path: str) -> str:
 	return path[:path.rfind('/') + 1]
 #end define
 
-def get_full_name_from_path(path):
+def get_full_name_from_path(path: str) -> str:
 	return path[path.rfind('/') + 1:]
 #end define
 
-def print_table(arr):
+def print_table(arr: Sequence[Sequence[Any]]) -> None:
 	buff = dict()
 	for i in range(len(arr[0])):
 		buff[i] = list()
@@ -875,11 +846,11 @@ def print_table(arr):
 		print()
 #end define
 
-def get_timestamp():
+def get_timestamp() -> int:
 	return int(time.time())
 #end define
 
-def color_text(text):
+def color_text(text: str) -> str:
 	for cname in bcolors.colors:
 		item = '{' + cname + '}'
 		if item in text:
@@ -887,36 +858,32 @@ def color_text(text):
 	return text
 #end define
 
-def color_print(text):
+def color_print(text: str) -> None:
 	text = color_text(text)
 	print(text)
 #end define
 
-def get_load_avg():
+def get_load_avg() -> list[float]:
 	psys = platform.system()
 	if psys in ["FreeBSD", "Darwin", "OpenBSD"]:
 		loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
 		if psys != "OpenBSD":
 			m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
 		else:
-			m = re.match("(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
+			m = re.match(r"(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
 		if m:
 			loadavg_arr = [m.group(1), m.group(2), m.group(3)]
 		else:
-			loadavg_arr = [0.00, 0.00, 0.00]
+			loadavg_arr = ["0.00", "0.00", "0.00"]
 	else:
 		file = open("/proc/loadavg")
 		loadavg = file.read()
 		file.close()
 		loadavg_arr = loadavg.split(' ')
 
-	output = loadavg_arr[:3]
-	for i in range(len(output)):
-		output[i] = float(output[i])
-	return output
-#end define
+	return [float(item) for item in loadavg_arr[:3]]
 
-def get_internet_interface_name():
+def get_internet_interface_name() -> str:
 	if platform.system() == "OpenBSD":
 		cmd = "ifconfig egress"
 		text = subprocess.getoutput(cmd)
@@ -937,24 +904,25 @@ def get_internet_interface_name():
 	return interface_name
 #end define
 
-def thr_sleep():
+def thr_sleep() -> None:
 	while True:
 		time.sleep(10)
 #end define
 
-def timestamp2datetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
+def timestamp2datetime(timestamp: int | float, format: str = "%d.%m.%Y %H:%M:%S") -> str:
 	datetime = time.localtime(timestamp)
 	result = time.strftime(format, datetime)
 	return result
 #end define
 
-def timeago(timestamp=False):
+def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False) -> str:
 	"""
 	Get a datetime object or a int() Epoch timestamp and return a
 	pretty string like 'an hour ago', 'Yesterday', '3 months ago',
 	'just now', etc
 	"""
 	now = date_time_library.datetime.now()
+	diff = date_time_library.timedelta(0)
 	if type(timestamp) is int:
 		diff = now - date_time_library.datetime.fromtimestamp(timestamp)
 	elif isinstance(timestamp, date_time_library.datetime):
@@ -987,7 +955,7 @@ def timeago(timestamp=False):
 	return str(day_diff // 365) + " years ago"
 #end define
 
-def time2human(diff):
+def time2human(diff: int | float) -> str:
 	dt = date_time_library.timedelta(seconds=diff)
 	if dt.days < 0:
 		return ''
@@ -1002,18 +970,18 @@ def time2human(diff):
 	return str(dt.days) + " days"
 #end define
 
-def dec2hex(dec):
+def dec2hex(dec: int) -> str:
 	h = hex(dec)[2:]
 	if len(h) % 2 > 0:
 		h = '0' + h
 	return h
 #end define
 
-def hex2dec(h):
+def hex2dec(h: str) -> int:
 	return int(h, base=16)
 #end define
 
-def run_as_root(args):
+def run_as_root(args: list[str]) -> int:
 	psys = platform.system()
 	if os.geteuid() != 0:
 		if psys == "Linux":
@@ -1030,7 +998,7 @@ def run_as_root(args):
 	return exit_code
 #end define
 
-def get_username():
+def get_username() -> str | None:
 	user = os.getenv("USER")
 	return user
 #end define
@@ -1121,15 +1089,15 @@ rc_cmd $1
 	subprocess.run(args)
 #end define
 
-def ip2int(addr):
+def ip2int(addr: str) -> int:
 	return struct.unpack("!i", socket.inet_aton(addr))[0]
 #end define
 
-def int2ip(dec):
+def int2ip(dec: int) -> str:
 	return socket.inet_ntoa(struct.pack("!i", dec))
 #end define
 
-def get_service_status(name):
+def get_service_status(name: str) -> bool:
 	status = False
 	psys = platform.system()
 	if psys == "OpenBSD":
@@ -1141,7 +1109,7 @@ def get_service_status(name):
 	return status
 #end define
 
-def get_service_uptime(name):
+def get_service_uptime(name: str) -> int | None:
 	property = "ExecMainStartTimestampMonotonic"
 	args = ["systemctl", "show", name, "--property=" + property]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
@@ -1158,7 +1126,7 @@ def get_service_uptime(name):
 	return uptime
 #end define
 
-def get_service_pid(name):
+def get_service_pid(name: str) -> int | None:
 	property = "MainPID"
 	args = ["systemctl", "show", name, "--property=" + property]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
@@ -1166,11 +1134,14 @@ def get_service_pid(name):
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
 		return
-	pid = int(parse(output, f"{property}=", '\n'))
+	pid_text = parse(output, f"{property}=", '\n')
+	if pid_text is None:
+		return None
+	pid = int(pid_text)
 	return pid
 #end define
 
-def get_git_hash(git_path, short=False):
+def get_git_hash(git_path: str, short: bool = False) -> str | None:
 	args = ["git", "rev-parse", "HEAD"]
 	if short is True:
 		args.insert(2, '--short')
@@ -1184,8 +1155,9 @@ def get_git_hash(git_path, short=False):
 	return buff[0]
 #end define
 
-def get_git_url(git_path):
+def get_git_url(git_path: str) -> str | None:
 	args = ["git", "remote", "-v"]
+	output = ""
 	try:
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
 								cwd=git_path, timeout=3)
@@ -1194,7 +1166,7 @@ def get_git_url(git_path):
 	except Exception as ex:
 		err = str(ex)
 	if len(err) > 0:
-		return
+		return None
 	lines = output.split('\n')
 	url = None
 	for line in lines:
@@ -1205,7 +1177,7 @@ def get_git_url(git_path):
 	return url
 #end define
 
-def get_git_author_and_repo(git_path):
+def get_git_author_and_repo(git_path: str) -> tuple[str | None, str | None]:
 	author = None
 	repo = None
 	url = get_git_url(git_path)
@@ -1219,7 +1191,7 @@ def get_git_author_and_repo(git_path):
 	return author, repo
 #end define
 
-def get_git_last_remote_commit(git_path, branch="master"):
+def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | None:
 	author, repo = get_git_author_and_repo(git_path)
 	if author is None or repo is None:
 		return
@@ -1234,14 +1206,14 @@ def get_git_last_remote_commit(git_path, branch="master"):
 	return sha
 #end define
 
-def get_git_branch(git_path):
+def get_git_branch(git_path: str) -> str | None:
 	args = ["git", "branch", "-v"]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
 							timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
-		return
+		return None
 	lines = output.split('\n')
 	branch = None
 	for line in lines:
@@ -1252,8 +1224,10 @@ def get_git_branch(git_path):
 	return branch
 #end define
 
-def check_git_update(git_path):
+def check_git_update(git_path: str) -> bool | None:
 	branch = get_git_branch(git_path)
+	if branch is None:
+		return None
 	new_hash = get_git_last_remote_commit(git_path, branch)
 	old_hash = get_git_hash(git_path)
 	result = False
@@ -1264,7 +1238,7 @@ def check_git_update(git_path):
 	return result
 #end define
 
-def read_config_from_file(config_path:str):
+def read_config_from_file(config_path: str) -> Dict:
 	file = open(config_path, 'rt')
 	text = file.read()
 	file.close()
@@ -1273,20 +1247,9 @@ def read_config_from_file(config_path:str):
 #end define
 
 
-def write_config_to_file(config_path:str, data:dict):
+def write_config_to_file(config_path: str, data: Mapping[str, Any]) -> None:
 	text = json.dumps(data, indent=4)
 	file = open(config_path, 'wt')
 	file.write(text)
 	file.close()
-#end define
-
-def get_own_ip():
-	pat = re.compile(r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$")
-	requests.packages.urllib3.util.connection.HAS_IPV6 = False
-	ip = requests.get("https://ifconfig.me/ip").text
-	if not pat.fullmatch(ip):
-		ip = requests.get("https://ipinfo.io/ip").text
-		if not pat.fullmatch(ip):
-			raise Exception('Cannot get own IP address')
-	return ip
 #end define
