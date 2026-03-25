@@ -2278,7 +2278,7 @@ class MyTonCore():
 		start = config32.get("startWorkTime")
 		assert start == election_id, 'provided election_id != election_id from config32'
 		end = config32.get("endWorkTime")
-		validators_load = self.GetValidatorsLoad(start, end - 60, saveCompFiles=True)
+		validators_load = self.GetValidatorsLoad(start, end - 60, save_comp_files=True, v2=True)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		result = {}
@@ -2341,21 +2341,24 @@ class MyTonCore():
 		return onlineValidators
 	#end define
 
-	def GetValidatorsLoad(self, start, end, saveCompFiles=False) -> dict:
-		# Get buffer
-		bname = f"validatorsLoad{start}{end}{saveCompFiles}"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
+	def GetValidatorsLoad(self, start: int, end: int, save_comp_files: bool = False, v2: bool = False) -> dict:
+		bname = f"validatorsLoad{start}{end}{save_comp_files}{v2}"
+		timeout = 60
+		cmd_suf = ""
+		if v2:
+			cmd_suf = "-v2"
+			timeout = 3600
+		buff = self.GetFunctionBuffer(bname, timeout=timeout)
 		if buff:
 			return buff
-		#end if
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
 		self.local.add_log(text, "debug")
-		if saveCompFiles is True:
+		if save_comp_files:
 			filePrefix = self.tempDir + f"checkload_{start}_{end}"
 		else:
 			filePrefix = ""
-		cmd = f"checkloadall {start} {end} {filePrefix}"
-		result = self.liteClient.Run(cmd, timeout=30)
+		cmd = f"checkloadall{cmd_suf} {start} {end} {filePrefix}"
+		result = self.liteClient.Run(cmd, timeout=180 if v2 else 30)
 		lines = result.split('\n')
 		data = dict()
 		for line in lines:
@@ -2488,14 +2491,14 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def CheckValidators(self, start, end):
+	def CheckValidators(self, start: int, end: int):
 		self.local.add_log("start CheckValidators function", "debug")
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
-		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
+		data = self.GetValidatorsLoad(start, end, save_comp_files=True, v2=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
 		config = self.GetConfig32()
@@ -3826,7 +3829,7 @@ class MyTonCore():
 	def get_validator_engine_ip(self):
 		return self.validatorConsole.addr.split(':')[0]
 
-	def GetFunctionBuffer(self, name, timeout=10):
+	def GetFunctionBuffer(self, name: str, timeout: int | float = 10):
 		timestamp = get_timestamp()
 		buff = self.local.buffer.get(name)
 		if buff is None:

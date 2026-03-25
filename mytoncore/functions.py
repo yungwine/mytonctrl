@@ -496,6 +496,8 @@ def Complaints(local, ton):
     config32 = ton.GetConfig32()
     election_id = config32.get("startWorkTime")
     complaints = ton.GetComplaints(election_id)  # get complaints from Elector
+    if not complaints:
+        return
     valid_complaints = ton.get_valid_complaints(complaints, election_id)
     for c in valid_complaints.values():
         complaint_hash = c.get("hash")
@@ -653,9 +655,9 @@ def General(local):
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
     local.start_cycle(save_past_events, sec=300, args=(local, ton, ))
 
-    t = 600
+    t = 1800
     if ton.GetNetworkName() != 'mainnet':
-        t = 60
+        t = 300
     local.start_cycle(Complaints, sec=t, args=(local, ton, ))
     local.start_cycle(Slashing, sec=t, args=(local, ton, ))
 
