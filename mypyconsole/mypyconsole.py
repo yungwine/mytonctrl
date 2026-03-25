@@ -6,6 +6,9 @@ import sys
 import readline
 from collections import deque
 
+from mypylib import MyPyClass
+
+
 class MyPyConsoleItem():
 	def __init__(self, cmd: str, func, desc: str, usage: str = ''):
 		self.cmd = cmd
@@ -15,12 +18,12 @@ class MyPyConsoleItem():
 	#end define
 #end class
 
-class MyPyConsole():
+class MyPyConsole:
 	RED = '\033[31m'
 	GREEN = '\033[92m'
 	ENDC = '\033[0m'
 
-	def __init__(self):
+	def __init__(self, local: MyPyClass):
 		self.debug = False
 		self.name = "console"
 		self.color = self.GREEN
@@ -30,7 +33,7 @@ class MyPyConsole():
 		self.start_function = None
 		self.menu_items = list()
 		self.history = deque(maxlen=100)
-		self.local = None
+		self.local: MyPyClass = local
 		self.add_item("help", self.help, "Print help text")
 		self.add_item("clear", self.clear, "Clear console")
 		self.add_item("history", self.print_history, "Print last commands")
