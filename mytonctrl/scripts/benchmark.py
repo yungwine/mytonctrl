@@ -9,11 +9,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import os
 
-from pytoniq_core import StateInit, Slice, begin_cell, MessageAny
+from pytoniq_core import Address, InternalMsgInfo, MessageAny, Slice, StateInit, WalletMessage, begin_cell
 
-from contract import SMCAddress
-from contract.wallet_v1 import WalletV1
-from tonlib import TonlibClient
+from contract import WalletV1, ton
 from tontester.install import Install
 from tontester.network import DHTNode, FullNode, Network
 from tontester.zerostate import SimplexConsensusConfig
@@ -160,35 +158,37 @@ async def setup_network(
     working_dir.mkdir(exist_ok=True, parents=True)
 
     install = Install(build_dir, source_dir)
+    install.tonlibjson.client_set_verbosity_level(3)
     network = Network(install, working_dir)
 
-    dht = network.create_dht_node()
+    dht = network.create_dht_node(threads=1)
     network.config.shard_consensus = SimplexConsensusConfig(target_block_rate_ms=block_rate)
     network.config.mc_consensus = SimplexConsensusConfig(target_block_rate_ms=master_block_rate)
     network.config.shard_validators = nodes_count
     network.config.split = int(math.log2(shards))
 
+    threads_per_node = max(1, (os.cpu_count() or 4) // nodes_count)
+
     nodes: list[FullNode] = []
     for _ in range(nodes_count):
-        node = network.create_full_node()
+        node = network.create_full_node(threads=threads_per_node)
         node.make_initial_validator()
         node.announce_to(dht)
         nodes.append(node)
 
-    await dht.run(threads=1)
-    threads_per_node = (os.cpu_count() or 4) // nodes_count
+    await dht.run()
     print(f"Running each node with {threads_per_node} threads")
     for node in nodes:
-        await node.run(threads=threads_per_node)
+        await node.run()
         await asyncio.sleep(3)
 
     return network, nodes, dht
 
 
-async def send_message(client: TonlibClient, message: MessageAny) -> None:
+async def send_with_retry(wallet: WalletV1, message: WalletMessage, seqno: int) -> None:
     while True:
         try:
-            await client.send_message(message)
+            await wallet.send(message, seqno)
             return
         except Exception as e:
             print(f"Sending message failed ({e}), retrying...")
@@ -225,45 +225,64 @@ async def collect_stats(client, stats: Stats) -> None:
     stats.print_new_seconds()
 
 
-def create_deploy_spammer_message(wallet: WalletV1, tps: int, i: int) -> MessageAny:
+def create_deploy_spammer_message(wallet: WalletV1, tps: int, i: int) -> WalletMessage:
     s_i = StateInit.deserialize(Slice.one_from_boc(SPAMMERS[i]))
     body = begin_cell().store_uint(0x5ce7c1d2, 32).store_uint(tps, 32).end_cell()
-    return wallet.get_transfer_message(
-        seqno=i,
-        message=wallet.create_wallet_internal_message(
-            destination=SMCAddress((0, s_i.serialize().hash)),
-            send_mode=3,
-            value=1000 * 10**9,
-            state_init=s_i,
+    return WalletMessage(
+        send_mode=3,
+        message=MessageAny(
+            info=InternalMsgInfo(
+                ihr_disabled=True,
+                bounce=False,
+                bounced=False,
+                src=wallet.address,
+                dest=Address((0, s_i.serialize().hash)),
+                value=ton(1000),
+                ihr_fee=0,
+                fwd_fee=0,
+                created_lt=0,
+                created_at=0,
+            ),
+            init=s_i,
             body=body,
         ),
     )
 
 
-def get_spammer_address(i: int) -> SMCAddress:
+def get_spammer_address(i: int) -> Address:
     s_i = StateInit.deserialize(Slice.one_from_boc(SPAMMERS[i]))
-    return SMCAddress((0, s_i.serialize().hash))
+    return Address((0, s_i.serialize().hash))
 
 
-def create_stop_spammer_message(wallet: WalletV1, seqno: int, spammer_addr: SMCAddress) -> MessageAny:
+def create_stop_spammer_message(wallet: WalletV1, spammer_addr: Address) -> WalletMessage:
     body = begin_cell().store_uint(0x07c32b3f, 32).end_cell()
-    return wallet.get_transfer_message(
-        seqno=seqno,
-        message=wallet.create_wallet_internal_message(
-            destination=spammer_addr,
-            send_mode=3,
-            value=1 * 10**9,
-            body=body
+    return WalletMessage(
+        send_mode=3,
+        message=MessageAny(
+            info=InternalMsgInfo(
+                ihr_disabled=True,
+                bounce=False,
+                bounced=False,
+                src=wallet.address,
+                dest=spammer_addr,
+                value=ton(1),
+                ihr_fee=0,
+                fwd_fee=0,
+                created_lt=0,
+                created_at=0,
+            ),
+            init=None,
+            body=body,
         ),
     )
 
 
-async def stop_spammers(client: TonlibClient, wallet: WalletV1, spammers_count: int) -> None:
+async def stop_spammers(wallet: WalletV1, spammers_count: int) -> None:
     print("\n===== Stopping spammers =====")
     for i in range(spammers_count):
         addr = get_spammer_address(i)
-        msg = create_stop_spammer_message(wallet, spammers_count + i, addr)
-        await send_message(client, msg)
+        msg = create_stop_spammer_message(wallet, addr)
+        await send_with_retry(wallet, msg, seqno=spammers_count + i)
         print(f"  Sent stop message to spammer {i}")
         await asyncio.sleep(2)
     print("All stop messages sent.")
@@ -273,10 +292,10 @@ async def run_sync_test(network: Network, dht: DHTNode) -> None:
     print("\n===== Sync Test =====")
 
     print("Starting new node from scratch...")
-    new_node = network.create_full_node()
-    new_node.announce_to(dht)
     sync_threads = max(2, (os.cpu_count() or 4) // 2)
-    await new_node.run(threads=sync_threads)
+    new_node = network.create_full_node(threads=sync_threads)
+    new_node.announce_to(dht)
+    await new_node.run()
 
     new_client = await new_node.tonlib_client()
 
@@ -335,13 +354,14 @@ async def main() -> None:
             print("Waiting for network to stabilize...")
             await asyncio.sleep(20)
 
-            client = await network.get_tonlib_client()
+            client = await nodes[0].tonlib_client()
+            main_wallet = network.zerostate.main_wallet(client)
 
             assert spammers_count <= len(SPAMMERS), f'too many spammers, max: {len(SPAMMERS)}'
 
             for i in range(spammers_count):
-                msg = create_deploy_spammer_message(network.zerostate.main_wallet, tps, i)
-                await send_message(client, msg)
+                msg = create_deploy_spammer_message(main_wallet, tps, i)
+                await send_with_retry(main_wallet, msg, seqno=i)
                 await asyncio.sleep(2)
 
             start = time.monotonic()
@@ -354,8 +374,7 @@ async def main() -> None:
             stats.print_summary(expected_bps=(1000 / shard_block_rate) * shards, expected_tps=tps * shards, shards=shards)
 
         if args.sync_test:
-            client = await network.get_tonlib_client()
-            await stop_spammers(client, network.zerostate.main_wallet, spammers_count)
+            await stop_spammers(main_wallet, spammers_count)
             print("Waiting for spammers to fully stop...")
             await asyncio.sleep(10)
             await run_sync_test(network, dht)
