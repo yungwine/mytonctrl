@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf_8 -*-l
 import datetime
 import os
 import sys
@@ -24,7 +22,7 @@ from mytoncore.telemetry import GetMemoryInfo, GetSwapInfo, GetUname, GetValidat
 from mytoninstaller.node_args import get_node_args
 
 
-def Init(local):
+def Init(local: MyPyClass):
     local.run()
 
     # statistics
@@ -40,7 +38,7 @@ def Init(local):
     local.buffer.transNum = 0
 
 
-def Elections(local, ton):
+def Elections(_, ton: MyTonCore):
     use_pool = ton.using_pool()
     use_liquid_staking = ton.using_liquid_staking()
     if use_pool:
@@ -52,17 +50,16 @@ def Elections(local, ton):
         ton.ElectionEntry()
 
 
-def Statistics(local):
+def Statistics(local: MyPyClass):
     ReadNetworkData(local)
     SaveNetworkStatistics(local)
-    # ReadTransData(local, scanner)
     SaveTransStatistics(local)
     ReadDiskData(local)
     SaveDiskStatistics(local)
 # end define
 
 
-def ReadDiskData(local):
+def ReadDiskData(local: MyPyClass):
     timestamp = get_timestamp()
     disks = GetDisksList()
     buff = psutil.disk_io_counters(perdisk=True)
@@ -70,7 +67,7 @@ def ReadDiskData(local):
     for name in disks:
         data[name] = dict()
         data[name]["timestamp"] = timestamp
-        data[name]["busyTime"] = buff[name].busy_time
+        data[name]["busyTime"] = buff[name].busy_time  # pyright: ignore[reportAttributeAccessIssue]
         data[name]["readBytes"] = buff[name].read_bytes
         data[name]["writeBytes"] = buff[name].write_bytes
         data[name]["readCount"] = buff[name].read_count
@@ -82,7 +79,7 @@ def ReadDiskData(local):
 # end define
 
 
-def SaveDiskStatistics(local):
+def SaveDiskStatistics(local: MyPyClass):
     data = local.buffer.diskio
     data = data[::-1]
     zerodata = data[0]
@@ -123,7 +120,7 @@ def SaveDiskStatistics(local):
 # end define
 
 
-def CalculateDiskStatistics(zerodata, data, name):
+def CalculateDiskStatistics(zerodata: dict, data: dict, name: str):
     if data is None:
         return None, None, None
     data = data[name]
@@ -160,7 +157,7 @@ def GetDisksList():
 # end define
 
 
-def ReadNetworkData(local):
+def ReadNetworkData(local: MyPyClass):
     timestamp = get_timestamp()
     interfaceName = get_internet_interface_name()
     buff = psutil.net_io_counters(pernic=True)
@@ -177,7 +174,7 @@ def ReadNetworkData(local):
 # end define
 
 
-def SaveNetworkStatistics(local):
+def SaveNetworkStatistics(local: MyPyClass):
     data = local.buffer.network
     data = data[::-1]
     zerodata = data[0]
@@ -206,7 +203,7 @@ def SaveNetworkStatistics(local):
 # end define
 
 
-def CalculateNetworkStatistics(zerodata, data):
+def CalculateNetworkStatistics(zerodata: dict, data: dict):
     if data is None:
         return None, None
     timeDiff = zerodata["timestamp"] - data["timestamp"]
@@ -224,7 +221,7 @@ def CalculateNetworkStatistics(zerodata, data):
 # end define
 
 
-def save_node_statistics(local, ton):
+def save_node_statistics(local: MyPyClass, ton: MyTonCore):
     status = ton.GetValidatorStatus(no_cache=True)
     if status.unixtime is None:
         return
@@ -292,31 +289,7 @@ def save_node_statistics(local, ton):
     local.save()
 
 
-def ReadTransData(local, scanner):
-    transData = local.buffer.transData
-    SetToTimeData(transData, scanner.transNum)
-    ShortTimeData(transData)
-# end define
-
-
-def SetToTimeData(timeDataList, data):
-    timenow = int(time.time())
-    timeDataList[timenow] = data
-# end define
-
-
-def ShortTimeData(data, max=120, diff=20):
-    if len(data) < max:
-        return
-    buff = data.copy()
-    data.clear()
-    keys = sorted(buff.keys(), reverse=True)
-    for item in keys[:max-diff]:
-        data[item] = buff[item]
-# end define
-
-
-def SaveTransStatistics(local):
+def SaveTransStatistics(local: MyPyClass):
     tps1 = GetTps(local, 60)
     tps5 = GetTps(local, 60*5)
     tps15 = GetTps(local, 60*15)
@@ -328,7 +301,7 @@ def SaveTransStatistics(local):
 # end define
 
 
-def GetDataPerSecond(data, timediff):
+def GetDataPerSecond(data: dict, timediff: int):
     if len(data) == 0:
         return
     timenow = sorted(data.keys())[-1]
@@ -343,40 +316,21 @@ def GetDataPerSecond(data, timediff):
 # end define
 
 
-def GetItemFromTimeData(data, timeneed):
+def GetItemFromTimeData(data: dict, timeneed: int):
     if timeneed in data:
         result = data.get(timeneed)
     else:
         result = data[min(data.keys(), key=lambda k: abs(k-timeneed))]
     return result
-# end define
 
 
-def GetTps(local, timediff):
+def GetTps(local: MyPyClass, timediff: int):
     data = local.buffer.transData
     tps = GetDataPerSecond(data, timediff)
     return tps
-# end define
 
 
-def GetBps(local, timediff):
-    data = local.buffer.blocksData
-    bps = GetDataPerSecond(data, timediff)
-    return bps
-# end define
-
-
-def GetBlockTimeAvg(local, timediff):
-    bps = GetBps(local, timediff)
-    if bps is None or bps == 0:
-        return
-    result = 1/bps
-    result = round(result, 2)
-    return result
-# end define
-
-
-def Offers(local, ton):
+def Offers(_, ton: MyTonCore):
     save_offers = ton.GetSaveOffers()
     if save_offers:
         ton.offers_gc(save_offers)
@@ -396,7 +350,7 @@ def Offers(local, ton):
                 ton.VoteOffer(offer)
 # end define
 
-def Telemetry(local, ton):
+def Telemetry(local: MyPyClass, ton: MyTonCore):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
         return
@@ -467,7 +421,7 @@ def GetBinGitHash(path, short=False):
 # end define
 
 
-def OverlayTelemetry(local, ton):
+def OverlayTelemetry(local: MyPyClass, ton: MyTonCore):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
         return
@@ -486,11 +440,12 @@ def OverlayTelemetry(local, ton):
 # end define
 
 
-def Complaints(local, ton):
-    validatorIndex = ton.GetValidatorIndex()
-    if validatorIndex < 0:
+def Complaints(_, ton: MyTonCore):
+    validator_index = ton.GetValidatorIndex()
+    if validator_index < 0:
         return
-    # end if
+    if time.time() < 1776643200:
+        return
 
     # Voting for complaints
     config32 = ton.GetConfig32()
@@ -502,10 +457,9 @@ def Complaints(local, ton):
     for c in valid_complaints.values():
         complaint_hash = c.get("hash")
         ton.VoteComplaint(election_id, complaint_hash)
-# end define
 
 
-def Slashing(local, ton):
+def Slashing(local: MyPyClass, ton: MyTonCore):
     is_slashing = local.db.get("isSlashing")
     is_validator = ton.using_validator()
     if is_slashing is not True or not is_validator:
@@ -528,21 +482,20 @@ def Slashing(local, ton):
 # end define
 
 
-def save_past_events(local, ton):
+def save_past_events(local: MyPyClass, ton: MyTonCore):
     local.try_function(ton.GetElectionEntries)
     local.try_function(ton.GetComplaints)
     local.try_function(ton.GetValidatorsList, args=[True])  # cache past vl
 
 
-def ScanLiteServers(local, ton):
-    # Считать список серверов
-    filePath = ton.liteClient.configPath
-    file = open(filePath, 'rt')
-    text = file.read()
-    file.close()
+def ScanLiteServers(local: MyPyClass, ton: MyTonCore):
+    file_path = ton.liteClient.configPath
+    if file_path is None:
+        raise RuntimeError("liteClient.configPath is None")
+    with open(file_path, 'rt') as f:
+        text = f.read()
     data = json.loads(text)
 
-    # Пройтись по серверам
     result = list()
     liteservers = data.get("liteservers")
     for index in range(len(liteservers)):
@@ -551,14 +504,11 @@ def ScanLiteServers(local, ton):
             result.append(index)
         except Exception:
             pass
-    # end for
 
-    # Записать данные в базу
     local.db["liteServers"] = result
-# end define
 
 
-def check_initial_sync(local, ton):
+def check_initial_sync(_, ton: MyTonCore):
     if not ton.in_initial_sync():
         return
     validator_status = ton.GetValidatorStatus()
@@ -569,7 +519,7 @@ def check_initial_sync(local, ton):
         return
 
 
-def gc_import(local, ton):
+def gc_import(local: MyPyClass, ton: MyTonCore):
     if not ton.local.db.get('importGc', False):
         return
     local.add_log("GC import is running", "debug")
@@ -634,7 +584,7 @@ def check_mytoncore_db(local: MyPyClass, ton: MyTonCore):
     ton.CheckConfigFile(None, None)  # get mytoncore db from backup
 
 
-def General(local):
+def General(local: MyPyClass):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
     # scanner = Dict()
@@ -680,13 +630,3 @@ def General(local):
     local.start_cycle(gc_import, sec=600, args=(local, ton))
 
     thr_sleep()
-# end define
-
-
-def mytoncore():
-    from mypylib.mypylib import MyPyClass
-
-    local = MyPyClass('mytoncore.py')
-    print('Local DB path:', local.db_path)
-    Init(local)
-    General(local)

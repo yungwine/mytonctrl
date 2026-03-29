@@ -32,13 +32,13 @@ from mypylib.mypylib import (
 	parse,
 	get_timestamp,
 	dec2hex,
-	Dict, int2ip
+	Dict, int2ip, MyPyClass
 )
 
 
 class MyTonCore():
-	def __init__(self, local):
-		self.local = local
+	def __init__(self, local: MyPyClass):
+		self.local: MyPyClass = local
 		self.walletsDir: Optional[str] = None
 		self.dbFile: Optional[str] = None
 		self.contractsDir: str
