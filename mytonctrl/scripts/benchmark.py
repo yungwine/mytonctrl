@@ -18,6 +18,7 @@ from tontester.zerostate import SimplexConsensusConfig
 
 POLL_INTERVAL = 2
 AVG_WINDOW = 10
+GB_PER_MINUTE = 0.4
 
 
 SPAMMERS = [
@@ -79,6 +80,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--work-dir", type=Path, default=None,
         help="path to working directory for network data (default: <source_dir>/test/integration/.network)"
+    )
+    parser.add_argument(
+        "--no-disk-check", action="store_true", default=False,
+        help="skip free disk space check before benchmark"
     )
     return parser.parse_args()
 
@@ -154,9 +159,6 @@ async def setup_network(
     source_dir: Path, build_dir: Path, working_dir: Path,
     shards: int, nodes_count: int, block_rate: int, master_block_rate: int,
 ) -> tuple[Network, list[FullNode], DHTNode]:
-    shutil.rmtree(working_dir, ignore_errors=True)
-    working_dir.mkdir(exist_ok=True, parents=True)
-
     install = Install(build_dir, source_dir)
     install.tonlibjson.client_set_verbosity_level(3)
     network = Network(install, working_dir)
@@ -345,6 +347,20 @@ async def main() -> None:
 
     build_dir = args.build_dir or source_dir / "build"
     working_dir = args.work_dir or source_dir / "test/integration/.network"
+
+    shutil.rmtree(working_dir, ignore_errors=True)
+    working_dir.mkdir(exist_ok=True, parents=True)
+
+    if not args.no_disk_check:
+        duration_minutes = args.duration / 60
+        required_gb = duration_minutes * shards * (tps / 1000) * GB_PER_MINUTE
+        free_gb = shutil.disk_usage(working_dir).free / (1024 ** 3)
+        if free_gb < required_gb:
+            raise SystemExit(
+                f"Not enough disk space: {free_gb:.1f} GB free, "
+                f"estimated {required_gb:.1f} GB required ({GB_PER_MINUTE} GB/min × {shards} shards × {tps / 1000}k TPS × {duration_minutes:.1f} min)"
+            )
+
     network, nodes, dht = await setup_network(source_dir, build_dir, working_dir, shards, nodes, shard_block_rate, master_block_rate)
 
     stats = Stats()
