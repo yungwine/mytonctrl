@@ -38,18 +38,6 @@ def Init(local: MyPyClass):
     local.buffer.transNum = 0
 
 
-def Elections(_, ton: MyTonCore):
-    use_pool = ton.using_pool()
-    use_liquid_staking = ton.using_liquid_staking()
-    if use_pool:
-        ton.PoolsUpdateValidatorSet()
-    if use_liquid_staking:
-        ton.ControllersUpdateValidatorSet()
-    ton.RecoverStake()
-    if ton.using_validator():
-        ton.ElectionEntry()
-
-
 def Statistics(local: MyPyClass):
     ReadNetworkData(local)
     SaveNetworkStatistics(local)
@@ -601,7 +589,8 @@ def General(local: MyPyClass):
         thr_sleep()
         return
 
-    local.start_cycle(Elections, sec=600, args=(local, ton, ))
+    from modules.validator import ValidatorModule
+    local.start_cycle(ValidatorModule(ton, local).run_elections, sec=600, args=())
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
     local.start_cycle(save_past_events, sec=300, args=(local, ton, ))
 
