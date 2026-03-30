@@ -2960,26 +2960,6 @@ class MyTonCore():
 		return bounceable
 	#en define
 
-	def GetNetLoadAvg(self, statistics=None):
-		if statistics is None:
-			statistics = self.local.db.get("statistics")
-		if statistics:
-			netLoadAvg = statistics.get("netLoadAvg")
-		else:
-			netLoadAvg = [-1, -1, -1]
-		return netLoadAvg
-	#end define
-
-	def GetTpsAvg(self, statistics=None):
-		if statistics is None:
-			statistics = self.local.db.get("statistics")
-		if statistics:
-			tpsAvg = statistics.get("tpsAvg")
-		else:
-			tpsAvg = [-1, -1, -1]
-		return tpsAvg
-	#end define
-
 	def GetStatistics(self, name, statistics=None):
 		if statistics is None:
 			statistics = self.local.db.get("statistics")

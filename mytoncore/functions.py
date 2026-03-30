@@ -26,22 +26,13 @@ def Init(local: MyPyClass):
     local.run()
 
     # statistics
-    local.buffer.blocksData = dict()
-    local.buffer.transData = dict()
     local.buffer.network = [None]*15*6
     local.buffer.diskio = [None]*15*6
-
-    # scan blocks
-    local.buffer.masterBlocksList = list()
-    local.buffer.prevShardsBlock = dict()
-    local.buffer.blocksNum = 0
-    local.buffer.transNum = 0
 
 
 def Statistics(local: MyPyClass):
     ReadNetworkData(local)
     SaveNetworkStatistics(local)
-    SaveTransStatistics(local)
     ReadDiskData(local)
     SaveDiskStatistics(local)
 # end define
@@ -277,47 +268,6 @@ def save_node_statistics(local: MyPyClass, ton: MyTonCore):
     local.save()
 
 
-def SaveTransStatistics(local: MyPyClass):
-    tps1 = GetTps(local, 60)
-    tps5 = GetTps(local, 60*5)
-    tps15 = GetTps(local, 60*15)
-
-    # save statistics
-    statistics = local.db.get("statistics", dict())
-    statistics["tpsAvg"] = [tps1, tps5, tps15]
-    local.db["statistics"] = statistics
-# end define
-
-
-def GetDataPerSecond(data: dict, timediff: int):
-    if len(data) == 0:
-        return
-    timenow = sorted(data.keys())[-1]
-    now = data.get(timenow)
-    prev = GetItemFromTimeData(data, timenow-timediff)
-    if prev is None:
-        return
-    diff = now - prev
-    result = diff / timediff
-    result = round(result, 2)
-    return result
-# end define
-
-
-def GetItemFromTimeData(data: dict, timeneed: int):
-    if timeneed in data:
-        result = data.get(timeneed)
-    else:
-        result = data[min(data.keys(), key=lambda k: abs(k-timeneed))]
-    return result
-
-
-def GetTps(local: MyPyClass, timediff: int):
-    data = local.buffer.transData
-    tps = GetDataPerSecond(data, timediff)
-    return tps
-
-
 def Offers(_, ton: MyTonCore):
     save_offers = ton.GetSaveOffers()
     if save_offers:
@@ -351,7 +301,7 @@ def Telemetry(local: MyPyClass, ton: MyTonCore):
     data["cpuNumber"] = psutil.cpu_count()
     data["cpuLoad"] = get_load_avg()
     data["netLoad"] = ton.GetStatistics("netLoadAvg")
-    data["tps"] = ton.GetStatistics("tpsAvg")
+    data["tps"] = [-1, -1, -1]
     data["disksLoad"] = ton.GetStatistics("disksLoadAvg")
     data["disksLoadPercent"] = ton.GetStatistics("disksLoadPercentAvg")
     data["iops"] = ton.GetStatistics("iopsAvg")

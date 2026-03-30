@@ -646,14 +646,12 @@ def PrintStatus(local, ton, args):
 		offersNumber = local.try_function(ton.GetOffersNumber)
 		complaintsNumber = local.try_function(ton.GetComplaintsNumber)
 
-		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
-
 		if validator_wallet is not None:
 			validator_account = ton.GetAccount(validator_wallet.addrB64)
 	#end if
 
 	if all_status:
-		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
 	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
 	if all_status and ton.using_validator():
@@ -661,10 +659,8 @@ def PrintStatus(local, ton, args):
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
-	#tps1 = tpsAvg[0]
-	#tps5 = tpsAvg[1]
-	#tps15 = tpsAvg[2]
+def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
+
 	allValidators = totalValidators
 	newOffers = offersNumber.get("new") if offersNumber else 'n/a'
 	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
