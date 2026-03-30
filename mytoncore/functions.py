@@ -1,6 +1,5 @@
 import datetime
 import os
-import psutil
 import time
 import json
 import subprocess
@@ -8,258 +7,15 @@ import subprocess
 from mypylib import MyPyClass
 from mytoncore.mytoncore import MyTonCore
 from mypylib.mypylib import (
-    b2mb,
     get_timestamp,
-    get_internet_interface_name,
     thr_sleep,
 )
+from mytoncore.stats_collector import StatsCollector
 from mytoncore.telemetry import build_telemetry_payload, build_overlay_telemetry_payload
 
 
 def Init(local: MyPyClass):
     local.run()
-
-    # statistics
-    local.buffer.network = [None]*15*6
-    local.buffer.diskio = [None]*15*6
-
-
-def Statistics(local: MyPyClass):
-    ReadNetworkData(local)
-    SaveNetworkStatistics(local)
-    ReadDiskData(local)
-    SaveDiskStatistics(local)
-# end define
-
-
-def ReadDiskData(local: MyPyClass):
-    timestamp = get_timestamp()
-    disks = GetDisksList()
-    buff = psutil.disk_io_counters(perdisk=True)
-    data = dict()
-    for name in disks:
-        data[name] = dict()
-        data[name]["timestamp"] = timestamp
-        data[name]["busyTime"] = buff[name].busy_time  # pyright: ignore[reportAttributeAccessIssue]
-        data[name]["readBytes"] = buff[name].read_bytes
-        data[name]["writeBytes"] = buff[name].write_bytes
-        data[name]["readCount"] = buff[name].read_count
-        data[name]["writeCount"] = buff[name].write_count
-    # end for
-
-    local.buffer.diskio.pop(0)
-    local.buffer.diskio.append(data)
-# end define
-
-
-def SaveDiskStatistics(local: MyPyClass):
-    data = local.buffer.diskio
-    data = data[::-1]
-    zerodata = data[0]
-    buff1 = data[1*6-1]
-    buff5 = data[5*6-1]
-    buff15 = data[15*6-1]
-    if buff5 is None:
-        buff5 = buff1
-    if buff15 is None:
-        buff15 = buff5
-    # end if
-
-    disksLoadAvg = dict()
-    disksLoadPercentAvg = dict()
-    iopsAvg = dict()
-    disks = GetDisksList()
-    for name in disks:
-        if zerodata[name]["busyTime"] == 0:
-            continue
-        diskLoad1, diskLoadPercent1, iops1 = CalculateDiskStatistics(
-            zerodata, buff1, name)
-        diskLoad5, diskLoadPercent5, iops5 = CalculateDiskStatistics(
-            zerodata, buff5, name)
-        diskLoad15, diskLoadPercent15, iops15 = CalculateDiskStatistics(
-            zerodata, buff15, name)
-        disksLoadAvg[name] = [diskLoad1, diskLoad5, diskLoad15]
-        disksLoadPercentAvg[name] = [diskLoadPercent1,
-                                     diskLoadPercent5, diskLoadPercent15]
-        iopsAvg[name] = [iops1, iops5, iops15]
-    # end fore
-
-    # save statistics
-    statistics = local.db.get("statistics", dict())
-    statistics["disksLoadAvg"] = disksLoadAvg
-    statistics["disksLoadPercentAvg"] = disksLoadPercentAvg
-    statistics["iopsAvg"] = iopsAvg
-    local.db["statistics"] = statistics
-# end define
-
-
-def CalculateDiskStatistics(zerodata: dict, data: dict, name: str):
-    if data is None:
-        return None, None, None
-    data = data[name]
-    zerodata = zerodata[name]
-    timeDiff = zerodata["timestamp"] - data["timestamp"]
-    busyTimeDiff = zerodata["busyTime"] - data["busyTime"]
-    diskReadDiff = zerodata["readBytes"] - data["readBytes"]
-    diskWriteDiff = zerodata["writeBytes"] - data["writeBytes"]
-    diskReadCountDiff = zerodata["readCount"] - data["readCount"]
-    diskWriteCountDiff = zerodata["writeCount"] - data["writeCount"]
-    diskLoadPercent = busyTimeDiff / 1000 / timeDiff * \
-        100  # /1000 - to second, *100 - to percent
-    diskLoadPercent = round(diskLoadPercent, 2)
-    diskRead = diskReadDiff / timeDiff
-    diskWrite = diskWriteDiff / timeDiff
-    diskReadCount = diskReadCountDiff / timeDiff
-    diskWriteCount = diskWriteCountDiff / timeDiff
-    diskLoad = b2mb(diskRead + diskWrite)
-    iops = round(diskReadCount + diskWriteCount, 2)
-    return diskLoad, diskLoadPercent, iops
-# end define
-
-
-def GetDisksList():
-    data = list()
-    buff = os.listdir("/sys/block/")
-    for item in buff:
-        if "loop" in item:
-            continue
-        data.append(item)
-    # end for
-    data.sort()
-    return data
-# end define
-
-
-def ReadNetworkData(local: MyPyClass):
-    timestamp = get_timestamp()
-    interfaceName = get_internet_interface_name()
-    buff = psutil.net_io_counters(pernic=True)
-    buff = buff[interfaceName]
-    data = dict()
-    data["timestamp"] = timestamp
-    data["bytesRecv"] = buff.bytes_recv
-    data["bytesSent"] = buff.bytes_sent
-    data["packetsSent"] = buff.packets_sent
-    data["packetsRecv"] = buff.packets_recv
-
-    local.buffer.network.pop(0)
-    local.buffer.network.append(data)
-# end define
-
-
-def SaveNetworkStatistics(local: MyPyClass):
-    data = local.buffer.network
-    data = data[::-1]
-    zerodata = data[0]
-    buff1 = data[1*6-1]
-    buff5 = data[5*6-1]
-    buff15 = data[15*6-1]
-    if buff5 is None:
-        buff5 = buff1
-    if buff15 is None:
-        buff15 = buff5
-    # end if
-
-    netLoadAvg = dict()
-    ppsAvg = dict()
-    networkLoadAvg1, ppsAvg1 = CalculateNetworkStatistics(zerodata, buff1)
-    networkLoadAvg5, ppsAvg5 = CalculateNetworkStatistics(zerodata, buff5)
-    networkLoadAvg15, ppsAvg15 = CalculateNetworkStatistics(zerodata, buff15)
-    netLoadAvg = [networkLoadAvg1, networkLoadAvg5, networkLoadAvg15]
-    ppsAvg = [ppsAvg1, ppsAvg5, ppsAvg15]
-
-    # save statistics
-    statistics = local.db.get("statistics", dict())
-    statistics["netLoadAvg"] = netLoadAvg
-    statistics["ppsAvg"] = ppsAvg
-    local.db["statistics"] = statistics
-# end define
-
-
-def CalculateNetworkStatistics(zerodata: dict, data: dict):
-    if data is None:
-        return None, None
-    timeDiff = zerodata["timestamp"] - data["timestamp"]
-    bytesRecvDiff = zerodata["bytesRecv"] - data["bytesRecv"]
-    bytesSentDiff = zerodata["bytesSent"] - data["bytesSent"]
-    packetsRecvDiff = zerodata["packetsRecv"] - data["packetsRecv"]
-    packetsSentDiff = zerodata["packetsSent"] - data["packetsSent"]
-    bitesRecvAvg = bytesRecvDiff / timeDiff * 8
-    bitesSentAvg = bytesSentDiff / timeDiff * 8
-    packetsRecvAvg = packetsRecvDiff / timeDiff
-    packetsSentAvg = packetsSentDiff / timeDiff
-    netLoadAvg = b2mb(bitesRecvAvg + bitesSentAvg)
-    ppsAvg = round(packetsRecvAvg + packetsSentAvg, 2)
-    return netLoadAvg, ppsAvg
-# end define
-
-
-def save_node_statistics(local: MyPyClass, ton: MyTonCore):
-    status = ton.GetValidatorStatus(no_cache=True)
-    if status.unixtime is None:
-        return
-    data = {'timestamp': status.unixtime}
-
-    def get_ok_error(value: str):
-        ok, error = value.split()
-        return int(ok.split(':')[1]), int(error.split(':')[1])
-
-    if 'total.collated_blocks.master' in status:
-        master_ok, master_error = get_ok_error(status['total.collated_blocks.master'])
-        shard_ok, shard_error = get_ok_error(status['total.collated_blocks.shard'])
-        data['collated_blocks'] = {
-            'master': {'ok': master_ok, 'error': master_error},
-            'shard': {'ok': shard_ok, 'error': shard_error},
-        }
-    if 'total.validated_blocks.master' in status:
-        master_ok, master_error = get_ok_error(status['total.validated_blocks.master'])
-        shard_ok, shard_error = get_ok_error(status['total.validated_blocks.shard'])
-        data['validated_blocks'] = {
-            'master': {'ok': master_ok, 'error': master_error},
-            'shard': {'ok': shard_ok, 'error': shard_error},
-        }
-    if 'total.ext_msg_check' in status:
-        ok, error = get_ok_error(status['total.ext_msg_check'])
-        data['ext_msg_check'] = {'ok': ok, 'error': error}
-    if 'total.ls_queries_ok' in status and 'total.ls_queries_error' in status:
-        data['ls_queries'] = {}
-        for k in status['total.ls_queries_ok'].split():
-            if k.startswith('TOTAL'):
-                data['ls_queries']['ok'] = int(k.split(':')[1])
-        for k in status['total.ls_queries_error'].split():
-            if k.startswith('TOTAL'):
-                data['ls_queries']['error'] = int(k.split(':')[1])
-    statistics = local.db.get("statistics", dict())
-
-    # if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
-    #     statistics['node'] = []
-
-    if 'node' not in statistics:
-        statistics['node'] = []
-
-    if statistics['node']:
-        if int(status.start_time) > statistics['node'][-1]['timestamp']:
-            # node was restarted, reset node statistics
-            statistics['node'] = []
-
-    # statistics['node']: [stats_from_election_id, stats_from_prev_min, stats_now]
-
-    election_id = ton.GetConfig34(no_cache=True)['startWorkTime']
-    if len(statistics['node']) == 0:
-        statistics['node'] = [None, data]
-    elif len(statistics['node']) < 3:
-        statistics['node'].append(data)
-    elif len(statistics['node']) == 3:
-        if statistics['node'][0] is None:
-            if 0 < data['timestamp'] - election_id < 90:
-                statistics['node'][0] = data
-        elif statistics['node'][0]['timestamp'] < election_id:
-            statistics['node'][0] = data
-        temp = statistics.get('node', []) + [data]
-        temp.pop(1)
-        statistics['node'] = temp
-    local.db["statistics"] = statistics
-    local.save()
 
 
 def Offers(_, ton: MyTonCore):
@@ -433,7 +189,8 @@ def General(local: MyPyClass):
     # scanner.Run()
 
     # Start threads
-    local.start_cycle(Statistics, sec=10, args=(local, ))
+    stats_collector = StatsCollector(local, ton)
+    local.start_cycle(stats_collector.save_statistics, sec=10, args=())
     local.start_cycle(build_telemetry_payload, sec=60, args=(local, ton, ))
     local.start_cycle(build_overlay_telemetry_payload, sec=7200, args=(local, ton, ))
     local.start_cycle(backup_mytoncore_logs, sec=3600*4, args=(local, ton, ))
@@ -456,7 +213,7 @@ def General(local: MyPyClass):
 
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
 
-    local.start_cycle(save_node_statistics, sec=60, args=(local, ton, ))
+    local.start_cycle(stats_collector.save_node_statistics, sec=60, args=())
 
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
