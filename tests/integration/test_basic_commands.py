@@ -216,7 +216,7 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     monkeypatch.setattr(mytonctrl_module, 'get_git_hash', lambda *_, **__: 'abcd')
     monkeypatch.setattr(mytonctrl_module, 'get_git_branch', lambda *_: 'master')
-    monkeypatch.setattr(mytonctrl_module, 'GetBinGitHash', lambda *_, **__: 'abcd')
+    monkeypatch.setattr(mytonctrl_module, 'get_bin_git_hash', lambda *_, **__: 'abcd')
     monkeypatch.setattr(mytonctrl_module, 'fix_git_config', lambda *_: None)
     monkeypatch.setattr(mytonctrl_module, 'get_service_status', lambda *_: True)
     monkeypatch.setattr(mytonctrl_module, 'get_service_uptime', lambda *_: 1000)
@@ -269,9 +269,8 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetComplaintsNumber", lambda *_: None)
     monkeypatch.setattr(MyTonCore, "GetAccount", lambda *_: Dict({"balance": 1000}))
 
-    from mytoncore import functions as core_funcs
-    monkeypatch.setattr(core_funcs, "GetMemoryInfo", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
-    monkeypatch.setattr(core_funcs, "GetSwapInfo", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(mytonctrl_module, "get_memory_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(mytonctrl_module, "get_swap_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
 
     output = cli.execute("status", no_color=True)
     assert "Traceback" not in output

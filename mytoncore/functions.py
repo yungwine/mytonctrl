@@ -1,25 +1,19 @@
 import datetime
 import os
-import sys
 import psutil
 import time
 import json
-import requests
 import subprocess
 
 from mypylib import MyPyClass
 from mytoncore.mytoncore import MyTonCore
-from mytonctrl.utils import fix_git_config
 from mypylib.mypylib import (
     b2mb,
     get_timestamp,
     get_internet_interface_name,
-    get_git_hash,
-    get_load_avg,
     thr_sleep,
 )
-from mytoncore.telemetry import GetMemoryInfo, GetSwapInfo, GetUname, GetValidatorProcessInfo, get_db_stats, get_cpu_name, is_host_virtual, get_validator_disk_name, get_pings_values
-from mytoninstaller.node_args import get_node_args
+from mytoncore.telemetry import build_telemetry_payload, build_overlay_telemetry_payload
 
 
 def Init(local: MyPyClass):
@@ -286,96 +280,6 @@ def Offers(_, ton: MyTonCore):
                 save_offer_pseudohash = save_offer
             if offer_pseudohash == save_offer_pseudohash and offer_pseudohash is not None:
                 ton.VoteOffer(offer)
-# end define
-
-def Telemetry(local: MyPyClass, ton: MyTonCore):
-    sendTelemetry = local.db.get("sendTelemetry")
-    if sendTelemetry is not True:
-        return
-    # end if
-
-    # Get validator status
-    data = dict()
-    data["adnlAddr"] = ton.GetAdnlAddr()
-    data["validatorStatus"] = ton.GetValidatorStatus()
-    data["cpuNumber"] = psutil.cpu_count()
-    data["cpuLoad"] = get_load_avg()
-    data["netLoad"] = ton.GetStatistics("netLoadAvg")
-    data["tps"] = [-1, -1, -1]
-    data["disksLoad"] = ton.GetStatistics("disksLoadAvg")
-    data["disksLoadPercent"] = ton.GetStatistics("disksLoadPercentAvg")
-    data["iops"] = ton.GetStatistics("iopsAvg")
-    data["pps"] = ton.GetStatistics("ppsAvg")
-    data["dbUsage"] = ton.GetDbUsage()
-    data["memory"] = GetMemoryInfo()
-    data["swap"] = GetSwapInfo()
-    data["uname"] = GetUname()
-    data["vprocess"] = GetValidatorProcessInfo()
-    data["dbStats"] = local.try_function(get_db_stats)
-    data["nodeArgs"] = local.try_function(get_node_args)
-    data["modes"] = local.try_function(ton.get_modes)
-    data["cpuInfo"] = {'cpuName': local.try_function(get_cpu_name), 'virtual': local.try_function(is_host_virtual)}
-    data["validatorDiskName"] = local.try_function(get_validator_disk_name)
-    data["pings"] = local.try_function(get_pings_values)
-    data["pythonVersion"] = sys.version
-
-    # Get git hashes
-    gitHashes = dict()
-    mtc_path = "/usr/src/mytonctrl"
-    local.try_function(fix_git_config, args=[mtc_path])
-    gitHashes["mytonctrl"] = get_git_hash(mtc_path)
-    gitHashes["validator"] = GetBinGitHash(
-        "/usr/bin/ton/validator-engine/validator-engine")
-    data["gitHashes"] = gitHashes
-    data["stake"] = local.db.get("stake")
-
-    # Get validator config
-    vconfig = ton.GetValidatorConfig()
-    data["fullnode_adnl"] = vconfig.fullnode
-
-    # Send data to toncenter server
-    liteUrl_default = "https://telemetry.toncenter.com/report_status"
-    liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
-    output = json.dumps(data)
-    requests.post(liteUrl, data=output, timeout=3)
-# end define
-
-
-def GetBinGitHash(path, short=False):
-    if not os.path.isfile(path):
-        return
-    args = [path, "--version"]
-    process = subprocess.run(args, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-    output = process.stdout.decode("utf-8")
-    if "build information" not in output:
-        return
-    buff = output.split(' ')
-    start = buff.index("Commit:") + 1
-    result = buff[start].replace(',', '')
-    if short is True:
-        result = result[:7]
-    return result
-# end define
-
-
-def OverlayTelemetry(local: MyPyClass, ton: MyTonCore):
-    sendTelemetry = local.db.get("sendTelemetry")
-    if sendTelemetry is not True:
-        return
-    # end if
-
-    # Get validator status
-    data = dict()
-    data["adnlAddr"] = ton.GetAdnlAddr()
-    data["overlaysStats"] = ton.GetOverlaysStats()
-
-    # Send data to toncenter server
-    overlayUrl_default = "https://telemetry.toncenter.com/report_overlays"
-    overlayUrl = local.db.get("overlayTelemetryUrl", overlayUrl_default)
-    output = json.dumps(data)
-    requests.post(overlayUrl, data=output, timeout=3)
-# end define
 
 
 def Complaints(_, ton: MyTonCore):
@@ -530,8 +434,8 @@ def General(local: MyPyClass):
 
     # Start threads
     local.start_cycle(Statistics, sec=10, args=(local, ))
-    local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
-    local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
+    local.start_cycle(build_telemetry_payload, sec=60, args=(local, ton, ))
+    local.start_cycle(build_overlay_telemetry_payload, sec=7200, args=(local, ton, ))
     local.start_cycle(backup_mytoncore_logs, sec=3600*4, args=(local, ton, ))
     local.start_cycle(check_mytoncore_db, sec=600, args=(local, ton, ))
 

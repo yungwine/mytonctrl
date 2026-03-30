@@ -2960,7 +2960,7 @@ class MyTonCore():
 		return bounceable
 	#en define
 
-	def GetStatistics(self, name, statistics=None):
+	def GetStatistics(self, name: str, statistics: dict[str, list[int]] = None) -> list[int]:
 		if statistics is None:
 			statistics = self.local.db.get("statistics")
 		if statistics:

@@ -38,13 +38,12 @@ from mypylib.mypylib import (
 
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
-from mytoncore.functions import (
-	GetMemoryInfo,
-	GetSwapInfo,
-	GetBinGitHash,
+from mytoncore.telemetry import (
+	get_memory_info,
+	get_swap_info,
 )
 from mytoncore.utils import get_package_resource_path
-from mytoncore.telemetry import is_host_virtual
+from mytoncore.telemetry import is_host_virtual, get_bin_git_hash
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
 	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version
@@ -600,8 +599,8 @@ def PrintStatus(local, ton, args):
 	validator_account = Dict()
 	db_size = ton.GetDbSize()
 	db_usage = ton.GetDbUsage()
-	memory_info = GetMemoryInfo()
-	swap_info = GetSwapInfo()
+	memory_info = get_memory_info()
+	swap_info = get_swap_info()
 	statistics = ton.GetSettings("statistics")
 	net_load_avg = ton.GetStatistics("netLoadAvg", statistics)
 	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
@@ -835,7 +834,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
-	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	validatorGitHash = get_bin_git_hash(validatorBinGitPath, short=True)
 	btc_teleport_git_hash = None
 	btc_teleport_git_branch = None
 	if ton.using_validator():
