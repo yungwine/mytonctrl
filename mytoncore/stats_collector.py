@@ -1,9 +1,12 @@
 import os
+from collections import deque
 
 import psutil
 
 from mypylib.mypylib import MyPyClass, get_timestamp, b2mb, get_internet_interface_name
 from mytoncore import MyTonCore
+
+BUFFER_SIZE = 15 * 6
 
 
 class StatsCollector:
@@ -11,6 +14,8 @@ class StatsCollector:
     def __init__(self, local: MyPyClass, ton: MyTonCore):
         self._local = local
         self._ton = ton
+        self._network: deque = deque([None] * BUFFER_SIZE, maxlen=BUFFER_SIZE)
+        self._diskio: deque = deque([None] * BUFFER_SIZE, maxlen=BUFFER_SIZE)
 
     def save_statistics(self):
         self.read_network_data()
@@ -32,12 +37,10 @@ class StatsCollector:
             data[name]["readCount"] = buff[name].read_count
             data[name]["writeCount"] = buff[name].write_count
 
-        self._local.buffer.diskio.pop(0)
-        self._local.buffer.diskio.append(data)
+        self._diskio.append(data)
 
     def save_disk_statistics(self):
-        data = self._local.buffer.diskio
-        data = data[::-1]
+        data = list(reversed(self._diskio))
         zerodata = data[0]
         buff1 = data[1 * 6 - 1]
         buff5 = data[5 * 6 - 1]
@@ -114,12 +117,10 @@ class StatsCollector:
         data = {"timestamp": timestamp, "bytesRecv": counters.bytes_recv, "bytesSent": counters.bytes_sent,
                 "packetsSent": counters.packets_sent, "packetsRecv": counters.packets_recv}
 
-        self._local.buffer.network.pop(0)
-        self._local.buffer.network.append(data)
+        self._network.append(data)
 
     def save_network_statistics(self):
-        data = self._local.buffer.network
-        data = data[::-1]
+        data = list(reversed(self._network))
         zerodata = data[0]
         buff1 = data[1 * 6 - 1]
         buff5 = data[5 * 6 - 1]
