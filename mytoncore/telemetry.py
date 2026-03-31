@@ -1,10 +1,9 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
-import json
 from typing import Any
-
-import requests
 
 import psutil
 
@@ -15,18 +14,17 @@ from mypylib.mypylib import get_service_pid, MyPyClass, get_git_hash, get_load_a
 from mytonctrl.utils import fix_git_config
 
 
-def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
-    send_telemetry = local.db.get("sendTelemetry")
-    if send_telemetry is not True:
-        return
+def build_overlay_telemetry_payload(ton: MyTonCore) -> dict[str, Any]:
+    return {"adnlAddr": ton.GetAdnlAddr(), "overlaysStats": ton.GetOverlaysStats()}
 
+
+def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
     data: dict[str, Any] = {
         "adnlAddr": ton.GetAdnlAddr(),
         "validatorStatus": ton.GetValidatorStatus(),
         "cpuNumber": psutil.cpu_count(),
         "cpuLoad": get_load_avg(),
         "netLoad": ton.GetStatistics("netLoadAvg"),
-        "tps": [-1, -1, -1],
         "disksLoad": ton.GetStatistics("disksLoadAvg"),
         "disksLoadPercent": ton.GetStatistics("disksLoadPercentAvg"),
         "iops": ton.GetStatistics("iopsAvg"),
@@ -61,26 +59,7 @@ def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
     vconfig = ton.GetValidatorConfig()
     data["fullnode_adnl"] = vconfig.fullnode
 
-    # Send data to toncenter server
-    lite_url_default = "https://telemetry.toncenter.com/report_status"
-    lite_url = local.db.get("telemetryLiteUrl", lite_url_default)
-    output = json.dumps(data)
-    requests.post(lite_url, data=output, timeout=3)
-
-
-def build_overlay_telemetry_payload(local: MyPyClass, ton: MyTonCore):
-    send_telemetry = local.db.get("sendTelemetry")
-    if send_telemetry is not True:
-        return
-
-    # Get validator status
-    data = {"adnlAddr": ton.GetAdnlAddr(), "overlaysStats": ton.GetOverlaysStats()}
-
-    # Send data to toncenter server
-    overlay_url_default = "https://telemetry.toncenter.com/report_overlays"
-    overlay_url = local.db.get("overlayTelemetryUrl", overlay_url_default)
-    output = json.dumps(data)
-    requests.post(overlay_url, data=output, timeout=3)
+    return data
 
 
 def get_uname():

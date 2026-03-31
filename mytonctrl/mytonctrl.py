@@ -665,13 +665,9 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
 	newComplaints = complaintsNumber.get("new") if complaintsNumber else 'n/a'
 	allComplaints = complaintsNumber.get("all") if complaintsNumber else 'n/a'
-	#tps1_text = bcolors.green_text(tps1)
-	#tps5_text = bcolors.green_text(tps5)
-	#tps15_text = bcolors.green_text(tps15)
 
 	color_network_name = bcolors.green_text(network_name) if network_name == "mainnet" else bcolors.yellow_text(network_name)
 	network_name_text = local.translate("ton_status_network_name").format(color_network_name)
-	#tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
 	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
 	allValidators_text = bcolors.yellow_text(allValidators)
 	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
