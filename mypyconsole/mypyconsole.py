@@ -64,9 +64,14 @@ class MyPyConsole:
         except Exception:
             pass
 
+    @staticmethod
+    def _rl_escape(code: str):
+        """Wrap ANSI code so readline ignores its width."""
+        return f"\x01{code}\x02"
+
     def user_worker(self):
         try:
-            result = input(self.color + self.name + "> " + self.ENDC)
+            result = input(self._rl_escape(self.color) + self.name + "> " + self._rl_escape(self.ENDC))
         except KeyboardInterrupt:
             self.exit([])
         except EOFError:
