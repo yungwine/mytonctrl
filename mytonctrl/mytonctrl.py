@@ -72,7 +72,7 @@ def Init(local, ton, console, argv):
 
 	# Create user console
 	console.name = "MyTonCtrl"
-	console.startFunction = inject_globals(pre_up)
+	console.start_function = inject_globals(pre_up)
 	console.debug = ton.GetSettings("debug")
 	console.local = local
 
