@@ -63,7 +63,8 @@ class MyPyConsole:
 			self.history.append(item)
 			self.local.db["console_history"] = list(self.history)
 			self.local.save()
-		except: pass
+		except Exception:
+			pass
 
 	def user_worker(self):
 		try:
@@ -84,7 +85,7 @@ class MyPyConsole:
 		args = result_list[1:]
 		for item in self.menu_items:
 			if cmd == item.cmd:
-				if self.debug == True:
+				if self.debug:
 					item.func(args)
 				else:
 					self._try(item.func, args)
@@ -139,7 +140,8 @@ class MyPyConsole:
 				self.history.extend(self.local.db.get("console_history", []))  # now self.history = deque(db["console_history"])
 				for item in self.history:
 					readline.add_history(item)
-		except: pass
+		except Exception:
+			pass
 		while True:
 			self.get_cmd_from_user()
 	#end define
@@ -147,6 +149,7 @@ class MyPyConsole:
 	def get_item_from_list(self, data, index):
 		try:
 			return data[index]
-		except: pass
+		except Exception:
+			pass
 	#end define
 #end class
