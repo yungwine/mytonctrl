@@ -40,13 +40,12 @@ from mypylib.mypylib import (
 
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
-from mytoncore.functions import (
-	GetMemoryInfo,
-	GetSwapInfo,
-	GetBinGitHash,
+from mytoncore.telemetry import (
+	get_memory_info,
+	get_swap_info,
 )
 from mytoncore.utils import get_package_resource_path, b642hex
-from mytoncore.telemetry import is_host_virtual
+from mytoncore.telemetry import is_host_virtual, get_bin_git_hash
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
 	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version
@@ -623,8 +622,8 @@ def PrintStatus(local, ton, args):
 	validator_account = Dict()
 	db_size = ton.GetDbSize()
 	db_usage = ton.GetDbUsage()
-	memory_info = GetMemoryInfo()
-	swap_info = GetSwapInfo()
+	memory_info = get_memory_info()
+	swap_info = get_swap_info()
 	statistics = ton.GetSettings("statistics")
 	net_load_avg = ton.GetStatistics("netLoadAvg", statistics)
 	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
@@ -670,14 +669,12 @@ def PrintStatus(local, ton, args):
 		offersNumber = local.try_function(ton.GetOffersNumber)
 		complaintsNumber = local.try_function(ton.GetComplaintsNumber)
 
-		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
-
 		if validator_wallet is not None:
 			validator_account = ton.GetAccount(validator_wallet.addrB64)
 	#end if
 
 	if all_status:
-		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
 	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl, vconfig)
 	if all_status and ton.using_validator():
@@ -685,22 +682,16 @@ def PrintStatus(local, ton, args):
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
-	#tps1 = tpsAvg[0]
-	#tps5 = tpsAvg[1]
-	#tps15 = tpsAvg[2]
+def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
+
 	allValidators = totalValidators
 	newOffers = offersNumber.get("new") if offersNumber else 'n/a'
 	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
 	newComplaints = complaintsNumber.get("new") if complaintsNumber else 'n/a'
 	allComplaints = complaintsNumber.get("all") if complaintsNumber else 'n/a'
-	#tps1_text = bcolors.green_text(tps1)
-	#tps5_text = bcolors.green_text(tps5)
-	#tps15_text = bcolors.green_text(tps15)
 
 	color_network_name = bcolors.green_text(network_name) if network_name == "mainnet" else bcolors.yellow_text(network_name)
 	network_name_text = local.translate("ton_status_network_name").format(color_network_name)
-	#tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
 	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
 	allValidators_text = bcolors.yellow_text(allValidators)
 	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
@@ -865,7 +856,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
-	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	validatorGitHash = get_bin_git_hash(validatorBinGitPath, short=True)
 	btc_teleport_git_hash = None
 	btc_teleport_git_branch = None
 	if ton.using_validator():

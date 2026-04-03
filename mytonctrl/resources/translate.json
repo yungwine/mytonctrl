@@ -374,11 +374,6 @@
 		"ru": "Название сети: {0}",
 		"zh_TW": "網路名字: {0}"
 	},
-	"ton_status_tps": {
-		"en": "Transactions per second (TPS): {0}, {1}, {2}",
-		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}",
-		"zh_TW": "每秒交易數 (TPS): {0}, {1}, {2}"
-	},
 	"ton_status_validators": {
 		"en": "Number of validators: {0}({1})",
 		"ru": "Количество валидаторов: {0}({1})",

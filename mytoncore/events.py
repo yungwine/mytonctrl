@@ -3,6 +3,20 @@ from mypylib import MyPyClass
 from mytoncore.mytoncore import MyTonCore
 
 
+def run_event(local: MyPyClass, event_name: str):
+    if event_name == "enableVC":
+        enable_vc_event(local)
+    elif event_name.startswith("enable_mode"):
+        enable_mode(local, event_name)
+    elif event_name == "enable_btc_teleport":
+        enable_btc_teleport(local)
+    elif event_name.startswith("setup_collator"):
+        setup_collator(local, event_name)
+    else:
+        raise Exception("Unknown event name")
+    local.exit()
+
+
 def enable_vc_event(local: MyPyClass):
     local.add_log("start EnableVcEvent function", "debug")
     ton = MyTonCore(local)

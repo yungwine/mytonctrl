@@ -15,6 +15,7 @@ from typing import Optional
 
 from modules import MODES
 from modules.btc_teleport import BtcTeleportModule
+from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path
 from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
@@ -2965,27 +2966,7 @@ class MyTonCore():
 		return bounceable
 	#en define
 
-	def GetNetLoadAvg(self, statistics=None):
-		if statistics is None:
-			statistics = self.local.db.get("statistics")
-		if statistics:
-			netLoadAvg = statistics.get("netLoadAvg")
-		else:
-			netLoadAvg = [-1, -1, -1]
-		return netLoadAvg
-	#end define
-
-	def GetTpsAvg(self, statistics=None):
-		if statistics is None:
-			statistics = self.local.db.get("statistics")
-		if statistics:
-			tpsAvg = statistics.get("tpsAvg")
-		else:
-			tpsAvg = [-1, -1, -1]
-		return tpsAvg
-	#end define
-
-	def GetStatistics(self, name, statistics=None):
+	def GetStatistics(self, name: str, statistics: dict[str, list[int]] = None) -> list[int]:
 		if statistics is None:
 			statistics = self.local.db.get("statistics")
 		if statistics:
@@ -2996,46 +2977,10 @@ class MyTonCore():
 	#end define
 
 	def get_node_statistics(self):
-		"""
-		:return: stats for collated/validated blocks since round beggining and stats for ls queries for the last minute
-		"""
 		stats = self.local.db.get('statistics', {}).get('node')
-		result = {}
-		if stats is not None and len(stats) == 3 and stats[0] is not None:
-			result = {
-				'collated': {
-					'ok': 0,
-					'error': 0,
-				},
-				'validated': {
-					'ok': 0,
-					'error': 0,
-				}
-			}
-			for k in ['master', 'shard']:
-				collated_ok = stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
-				collated_error = stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
-				validated_ok = stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
-				validated_error = stats[2]['validated_blocks'][k]['error'] - stats[0]['validated_blocks'][k]['error']
-				result['collated'][k] = {
-					'ok': collated_ok,
-					'error': collated_error,
-				}
-				result['validated'][k] = {
-					'ok': validated_ok,
-					'error': validated_error,
-				}
-				result['collated']['ok'] += collated_ok
-				result['collated']['error'] += collated_error
-				result['validated']['ok'] += validated_ok
-				result['validated']['error'] += validated_error
-		if stats is not None and len(stats) >= 2 and stats[-2] is not None and stats[-1] is not None:
-			result['ls_queries'] = {
-				'ok': stats[-1]['ls_queries']['ok'] - stats[-2]['ls_queries']['ok'],
-				'error': stats[-1]['ls_queries']['error'] - stats[-2]['ls_queries']['error'],
-				'time': stats[-1].get('timestamp', 0) - stats[-2].get('timestamp', 0),
-			}
-		return result
+		if stats is None:
+			return {}
+		return StatsCollector.parse_node_statistics(stats)
 
 	def GetSettings(self, name):
 		# self.local.load_db()
