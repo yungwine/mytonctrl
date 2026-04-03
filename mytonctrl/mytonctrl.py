@@ -457,6 +457,8 @@ def run_benchmark(args: list):
 
 def check_mytonctrl_update(local: MyPyClass):
 	git_path = '/usr/src/mytonctrl'
+	if not os.path.exists(git_path):
+		return
 	result = check_git_update(git_path)
 	if result:
 		color_print(local.translate("mytonctrl_update_available"))
