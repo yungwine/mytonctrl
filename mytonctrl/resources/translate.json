@@ -674,6 +674,11 @@
 		"ru": "{{red}}Версия Ubuntu должна быть 22.04 или 24.04. Найдена {0}. {{endc}}",
 		"zh_TW": "{{red}}Ubuntu 版本必須是 22.04 或 24.04。找到 {0}。{{endc}}"
 	},
+	"node_port_warning": {
+		"en": "{{red}}Node port {0} is greater than 64535 but quic port is not set. {{endc}}",
+		"ru": "{{red}}Порт ноды {0} больше 64535, но quic порт не установлен. {{endc}}",
+		"zh_TW": "{{red}}節點端口 {0} 大於 64535，但 quic 端口未設置。{{endc}}"
+	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
 		"ru": "Добавить пользовательский оверлей",

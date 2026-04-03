@@ -546,6 +546,23 @@ def check_ubuntu_version(local: MyPyClass):
 			warning = local.translate("ubuntu_version_warning").format(ver)
 			print_warning(local, warning)
 
+def check_node_port(local: MyPyClass, ton: MyTonCore):
+	if not ton.using_validator():
+		return
+	try:
+		vconfig = ton.GetValidatorConfig()
+	except Exception:
+		return
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.quicAddr":  # quic port exists
+			return
+	for addr in vconfig["addrs"]:
+		port = addr["port"]
+		if port > 64535:
+			warning = local.translate("node_port_warning").format(port)
+			print_warning(local, warning)
+			return
+
 def warnings(local: MyPyClass, ton: MyTonCore):
 	local.try_function(check_disk_usage, args=[local, ton])
 	local.try_function(check_sync, args=[local, ton])
@@ -555,6 +572,7 @@ def warnings(local: MyPyClass, ton: MyTonCore):
 	local.try_function(check_tg_channel, args=[local, ton])
 	local.try_function(check_slashed, args=[local, ton])
 	local.try_function(check_ubuntu_version, args=[local])
+	local.try_function(check_node_port, args=[local, ton])
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
