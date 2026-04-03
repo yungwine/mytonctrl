@@ -975,16 +975,21 @@ class MyTonCore():
 		return output
 	#end define
 
-	def AddAdnlAddrToValidator(self, adnlAddr: str):
-		self.local.add_log("start AddAdnlAddrToValidator function", "debug")
-		output = False
-		result = self.validatorConsole.Run("addadnl {adnlAddr} 0".format(adnlAddr=adnlAddr))
-		if ("success" in result):
-			output = True
-		return output
-	#end define
+	def add_adnl_addr(self, adnl_addr: str, category: int = 0) -> bool:
+		self.local.add_log(f"adding {adnl_addr} adnl addr category {category}", "debug")
+		result = self.validatorConsole.Run(f"addadnl {adnl_addr} {category}")
+		return "success" in result
 
-	def GetAdnlAddr(self):
+	def update_adnl_category(self, adnl_addr: str, category: int) -> bool:
+		res = self.add_adnl_addr(adnl_addr=adnl_addr, category=category)
+		if res:
+			self.local.add_log(f"Changed category for {adnl_addr} ADNL address in validator config", "info")
+			return True
+		else:
+			self.local.add_log(f"Failed to change category for {adnl_addr} ADNL address in validator config", "error")
+			return False
+
+	def GetAdnlAddr(self) -> str | None:
 		adnlAddr = self.local.db.get("adnlAddr")
 		return adnlAddr
 	#end define
