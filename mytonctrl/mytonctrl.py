@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import pathlib
 import subprocess
@@ -43,7 +45,7 @@ from mytoncore.functions import (
 	GetSwapInfo,
 	GetBinGitHash,
 )
-from mytoncore.utils import get_package_resource_path
+from mytoncore.utils import get_package_resource_path, b642hex
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
@@ -89,6 +91,7 @@ def Init(local, ton, console, argv):
 	add_command(local, console, "set", inject_globals(SetSettings))
 	add_command(local, console, "download_archive_blocks", inject_globals(download_archive_blocks))
 	add_command(local, console, "benchmark", inject_globals(run_benchmark))
+	add_command(local, console, "set_quic_port", inject_globals(set_quic_port))
 
 	from modules.backups import BackupModule
 	module = BackupModule(ton, local)
@@ -1091,6 +1094,62 @@ def download_archive_blocks(local, args: list):
 	local.buffer.ton_storage.api_port = api_port
 	local.buffer.global_config_path = '/usr/bin/ton/global.config.json'
 	download_blocks(local, str(path.absolute()), from_block, to_block, only_master)
+
+
+def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
+	if not check_usage_args_min_max_len("set_quic_port", args, 1, 2):
+		return
+	try:
+		port = int(args[0])
+	except ValueError:
+		color_print("{red}Port must be an integer{endc}")
+		return
+	if port < 0 or port > 65535:
+		color_print("{red}Port must be between 0 and 65535{endc}")
+		return
+	category = 2
+	if len(args) > 1:
+		try:
+			category = int(args[1])
+		except ValueError:
+			color_print("{red}Category must be an integer{endc}")
+			return
+
+	vconfig = ton.GetValidatorConfig()
+	ip = int2ip(vconfig["addrs"][0]["ip"])
+	adnl_addr = ton.GetAdnlAddr()
+	if adnl_addr is None:
+		raise Exception("ADNL address is not set")
+
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.addr" and category not in addr.get("categories", []):
+			raise Exception(f"Category {category} is not set for address {addr}")
+
+
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.quicAddr":
+			addr_ip = int2ip(addr["ip"])
+			addr_port = addr["port"]
+			cat = addr["categories"]
+			priocat = addr["priority_categories"]
+			cat = f"[ {' '.join(map(str, cat))} ]"
+			priocat = f"[ {' '.join(map(str, priocat))} ]"
+			result = ton.validatorConsole.Run(f"del-quic-addr {addr_ip}:{addr_port} {cat} {priocat}")
+			color_print(f"Deleted quic addr {addr_ip}:{addr_port}: {result.splitlines()[-1].strip()}")
+
+	if port > 0:
+		ton.update_adnl_category(adnl_addr=adnl_addr, category=category)
+
+		from modules.collator import CollatorModule
+		collators = CollatorModule(ton, local).get_collators()
+		collator_adnls = []
+		for collator in collators:
+			collator_adnls.append(b642hex(collator['adnl_id']).upper())
+		for collator_adnl in set(collator_adnls):
+			ton.update_adnl_category(adnl_addr=collator_adnl, category=category)
+
+		result = ton.validatorConsole.Run(f"add-quic-addr {ip}:{port} [ {category} ] [ ]")
+		local.add_log(f"Added quic addr {ip}:{port}: {result.splitlines()[-1].strip()}", "info")
 
 
 ### Start of the program

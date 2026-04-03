@@ -11,7 +11,7 @@ def enable_vc_event(local: MyPyClass):
     local.db["validatorWalletName"] = wallet.name
     adnl_addr = ton.CreateNewKey()
     assert adnl_addr is not None
-    ton.AddAdnlAddrToValidator(adnl_addr)
+    ton.add_adnl_addr(adnl_addr)
     local.db["adnlAddr"] = adnl_addr
     local.save()
 

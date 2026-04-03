@@ -779,7 +779,11 @@
 		"ru": "Остановить работающий коллатор на этой ноде. Используйте без аргументов, чтобы остановить все коллаторы",
 		"zh_TW": "停止在此節點上運行的協作者。無參數使用以停止所有協作者"
 	},
-
+	"set_quic_port_cmd": {
+		"en": "Set QUIC port for node. Deletes existing QUIC addresses and sets new one with specified port (use port = 0 to delete). Changes ADNL addresses categories of validator and collator",
+		"ru": "Установить порт QUIC для узла. Удаляет существующие адреса QUIC и устанавливает новый с указанным портом (используйте port = 0 для удаления). Изменяет категории ADNL адресов для валидатора и коллатора",
+		"zh_TW": "設定節點的 QUIC 埠。刪除現有的 QUIC 位址並設定新的位址，帶有指定的埠 (使用 port = 0 刪除)。更改驗證者和協作者的 ADNL 位址類別"
+	},
 	"000a": {
 		"en": "001",
 		"ru": "002",
