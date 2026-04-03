@@ -706,9 +706,9 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 #end define
 
 def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
-	if validatorWallet is None:
-		return
-	walletAddr = validatorWallet.addrB64
+	walletAddr = 'n/a'
+	if validatorWallet is not None:
+		walletAddr = validatorWallet.addrB64
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
 	loadavg = get_load_avg()
