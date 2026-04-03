@@ -460,6 +460,8 @@ def run_benchmark(args: list):
 
 def check_mytonctrl_update(local: MyPyClass):
 	git_path = '/usr/src/mytonctrl'
+	if not os.path.exists(git_path):
+		return
 	result = check_git_update(git_path)
 	if result:
 		color_print(local.translate("mytonctrl_update_available"))
@@ -727,10 +729,12 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
+
 def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl, vconfig):
-	if validatorWallet is None:
-		return
-	walletAddr = validatorWallet.addrB64
+	walletAddr = 'n/a'
+	if validatorWallet is not None:
+		walletAddr = validatorWallet.addrB64
+
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
 	loadavg = get_load_avg()
