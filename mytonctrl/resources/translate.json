@@ -419,6 +419,11 @@
 		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
 		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
 	},
+	"node_ports": {
+		"en": "Node ports: {0}",
+		"ru": "Порты ноды: {0}",
+		"zh_TW": "節點端口: {0}"
+	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}",

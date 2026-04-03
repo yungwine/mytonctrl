@@ -209,8 +209,12 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     monkeypatch.setattr(MyTonCore, "GetSettings", fake_GetSettings)
     monkeypatch.setattr(MyTonCore, "GetStatistics", fake_GetStatistics)
-    vconfig_mock = mocker.Mock()
+    vconfig_mock = Dict()
     vconfig_mock.fullnode = base64.b64encode(b"\x01\x02\x03\x04").decode()
+    vconfig_mock["addrs"] = [
+            {"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]},
+            {"@type": "engine.quicAddr", "ip": 2130706433, "port": 9999},
+        ]
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda *_: vconfig_mock)
     monkeypatch.setattr(MyTonCore, "get_validator_engine_ip", lambda *_: '127.0.0.1')
 
@@ -223,6 +227,7 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     output = cli.execute("status", no_color=True)
     assert 'Error' not in output
+    assert 'Node ports: 30000, 9999 (QUIC)' in output
     assert 'Node status' in output
     assert 'Node mode: VALIDATOR' in output
     assert 'ADNL address of local validator: 1234ABCD' in output

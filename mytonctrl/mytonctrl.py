@@ -630,6 +630,7 @@ def PrintStatus(local, ton, args):
 
 	all_status = validator_status.is_working and validator_status.out_of_sync < 20
 
+	vconfig = None
 	try:
 		vconfig = ton.GetValidatorConfig()
 		fullnode_adnl = base64.b64decode(vconfig.fullnode).hex().upper()
@@ -676,7 +677,7 @@ def PrintStatus(local, ton, args):
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
 	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
-		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl, vconfig)
 	if all_status and ton.using_validator():
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
@@ -726,7 +727,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
+def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl, vconfig):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -894,6 +895,28 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	if is_node_remote:
 		nodeIpAddr_text = local.translate("node_ip_address").format(node_ip)
 		color_print(nodeIpAddr_text)
+	# Node ports
+	if vconfig is not None:
+		try:
+			main_port = None
+			quic_port = None
+			for addr in vconfig.get("addrs", []):
+				if addr.get("@type") == "engine.addr" and main_port is None:
+					main_port = addr.get("port")
+				elif addr.get("@type") == "engine.quicAddr" and quic_port is None:
+					quic_port = addr.get("port")
+			ports_parts = []
+			if main_port is not None:
+				ports_parts.append(bcolors.yellow_text(main_port))
+			if ton.using_validator():
+				if quic_port is not None:
+					ports_parts.append(bcolors.yellow_text(f"{quic_port} (QUIC)"))
+				elif main_port is not None:
+					ports_parts.append(bcolors.yellow_text(f"{main_port + 1000} (QUIC)"))
+			if ports_parts:
+				color_print(local.translate("node_ports").format(", ".join(ports_parts)))
+		except Exception:
+			pass
 	if ton.using_validator():
 		print(validatorIndex_text)
 		# print(validatorEfficiency_text)
