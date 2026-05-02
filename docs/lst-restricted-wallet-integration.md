@@ -138,11 +138,12 @@ The direct deploy branch activates only for:
 Wallets created through the new path get that version automatically.
 Externally deployed wallets still need correct version assignment.
 
-### G. No added support yet for config/elector body-aware permissioning
-This branch only integrates controller deployment assumptions.
-It does **not** add any extra mytonctrl support for proposal/complaint governance flows related to the restricted wallet policy.
+### G. Governance support is intentionally narrow
+This branch supports only these extra wallet destinations:
+- proposal vote -> config
+- complaint vote -> elector
 
-That is expected for current scope.
+Submitting brand new complaints to elector remains blocked by wallet policy on purpose.
 
 ## Real-world verification runbook
 

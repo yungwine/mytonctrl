@@ -210,6 +210,8 @@ class WalletModule(MtcModule):
             deploy_data["controller_code_path"],
             treasury_addr,
             liquid_pool_addr,
+            self.ton.GetFullConfigAddr(),
+            self.ton.GetFullElectorAddr(),
             workchain,
             wallet_path,
         ]

@@ -2,18 +2,20 @@
 "TonUtil.fif" include
 "Asm.fif" include
 
-{ ."usage: " @' $0 type ." <wallet-code-boc> <controller-code-boc> <treasury-addr> <pool-addr> <workchain-id> [<filename-base>]" cr
+{ ."usage: " @' $0 type ." <wallet-code-boc> <controller-code-boc> <treasury-addr> <pool-addr> <config-addr> <elector-addr> <workchain-id> [<filename-base>]" cr
   ."Creates a new lst_restricted_wallet and saves private key to or loads it from <filename-base>.pk" cr
   ."('new-wallet' by default)" cr 1 halt
 } : usage
-$# 5- -2 and ' usage if
+$# 7- -2 and ' usage if
 
 $1 =: wallet-code-file
 $2 =: controller-code-file
 $3 parse-smc-addr drop 2=: treasury-addr
 $4 parse-smc-addr drop 2=: pool-addr
-$5 parse-int =: wc
-def? $6 { @' $6 } { "new-wallet" } cond constant file-base
+$5 parse-smc-addr drop 2=: config-addr
+$6 parse-smc-addr drop 2=: elector-addr
+$7 parse-int =: wc
+def? $8 { @' $8 } { "new-wallet" } cond constant file-base
 
 wallet-code-file file>B dup
 8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
@@ -29,18 +31,22 @@ file-base +".pk" load-generate-keypair
 constant wallet_pk
 controller-code hashu constant controller_code_hash
 
-<b pool-addr Addr,
+<b null dict, b> =: allowlist
+<b config-addr Addr,
+   elector-addr Addr,
    controller_code_hash 256 u,
-   null dict,
+   allowlist ref,
+ b> =: policy-data
+<b pool-addr Addr,
+   policy-data ref,
  b> =: extra-data
-
 <b 0 32 u,
    wallet_pk B,
    treasury-addr Addr,
    extra-data ref,
  b> =: wallet-data
 wallet-code wallet-data null // code data libs
-<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>
 dup ."StateInit: " <s csr. cr
 dup hashu wc swap 2dup 2constant wallet_addr
 ."new wallet address = " 2dup .addr cr

@@ -36,12 +36,11 @@ In practice this means:
 
 ## Current scope and limitations
 
-At the time of writing, this branch supports the liquid-staking controller workflow, but **does not yet add body-aware permissions for config/elector governance paths**.
+At the time of writing, this branch supports the liquid-staking controller workflow plus a narrow governance path:
 
-That means:
-
-- controller creation and controller operations are the supported target flow
-- proposal voting / complaint voting / complaint submission should be treated as **not integrated yet** unless verified separately
+- proposal voting to config is supported
+- complaint voting to elector is supported
+- submitting brand new complaints is intentionally blocked
 
 Other important notes:
 
@@ -212,6 +211,11 @@ Each pool may have its own approval process. Obtain approval according to the po
 ## Daily operations
 
 Once controllers are deployed and approved, regular controller operations should continue through the restricted wallet path.
+
+Governance-related note:
+- voting on existing proposals should work
+- voting on existing complaints should work
+- creating brand new complaints is intentionally blocked by wallet policy
 
 Useful commands:
 
