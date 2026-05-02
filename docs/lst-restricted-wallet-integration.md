@@ -2,6 +2,9 @@
 
 Branch: `feat/lst-restricted-wallet-integration`
 
+Operator-facing setup guide:
+- `docs/lst-restricted-wallet-guide.md`
+
 ## What changed
 
 ### 1. `new_controllers` switches behavior only for `lst_restricted_wallet`
