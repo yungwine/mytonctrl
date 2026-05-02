@@ -987,9 +987,9 @@ class MyTonCore:
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, boc_mode: str = "--body"):
+	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, boc_mode: str = "--body", init_boc_path: str | None = None, extra_flags: list[str] | None = None):
 		self.local.add_log("start SignBocWithWallet function", "debug")
-		flags = []
+		flags = list(extra_flags or [])
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
@@ -1008,7 +1008,7 @@ class MyTonCore:
 
 		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
+		if wallet.version == "lst_restricted_wallet" or "v1" in wallet.version:
 			fift_script = "wallet.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif "v2" in wallet.version:
@@ -1023,6 +1023,8 @@ class MyTonCore:
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:
 			raise Exception(f"SignBocWithWallet error: Wallet version '{wallet.version}' is not supported")
+		if init_boc_path:
+			args += ["-I", init_boc_path]
 		if flags:
 			args += flags
 		result = self.fift.run(args)
@@ -2976,6 +2978,201 @@ class MyTonCore:
 		return liquid_pool_addr
 	#end define
 
+	def RunTonHttpGetMethod(self, address: str, method: str, stack: list | None = None):
+		self.local.add_log(f"start RunTonHttpGetMethod function ({method})", "debug")
+		if stack is None:
+			stack = []
+		url = self.local.db.get("tonHttpApiUrl", "http://127.0.0.1:8801")
+		if not url.endswith("/runGetMethod"):
+			url = url.rstrip("/") + "/runGetMethod"
+		data = {
+			"address": address,
+			"method": method,
+			"stack": stack,
+		}
+		res = requests.post(url, json=data, timeout=5)
+		res_data = res.json()
+		if res_data.get("ok") is False:
+			error = res_data.get("error") or res_data.get("message") or res_data
+			raise Exception(f"RunTonHttpGetMethod error: {error}. Make sure ton-http-api is enabled (installer -> enable THA)")
+		result = res_data.get("result")
+		if result is None or "stack" not in result:
+			raise Exception(f"RunTonHttpGetMethod error: malformed response: {res_data}")
+		return result["stack"]
+	#end define
+
+	@staticmethod
+	def _read_be_uint(data: bytes, offset: int, size: int):
+		end = offset + size
+		if end > len(data):
+			raise Exception("Unexpected end of data while reading integer")
+		return int.from_bytes(data[offset:end], "big"), end
+	#end define
+
+	@staticmethod
+	def _count_trailing_zero_bits(value: int):
+		count = 0
+		while count < 8 and value & 1 == 0:
+			count += 1
+			value >>= 1
+		return count
+	#end define
+
+	def _extract_boc_root_cell_bits(self, boc_bytes: bytes):
+		if len(boc_bytes) < 6 or boc_bytes[:4] != b"\xb5\xee\x9cr":
+			raise Exception("Unsupported BOC format")
+		flags_byte = boc_bytes[4]
+		has_idx = bool(flags_byte & 0x80)
+		size_bytes = flags_byte & 0x07
+		offset_bytes = boc_bytes[5]
+		offset = 6
+		cells_num, offset = self._read_be_uint(boc_bytes, offset, size_bytes)
+		roots_num, offset = self._read_be_uint(boc_bytes, offset, size_bytes)
+		_absent_num, offset = self._read_be_uint(boc_bytes, offset, size_bytes)
+		total_cells_size, offset = self._read_be_uint(boc_bytes, offset, offset_bytes)
+		root_list = []
+		for _ in range(roots_num):
+			root_idx, offset = self._read_be_uint(boc_bytes, offset, size_bytes)
+			root_list.append(root_idx)
+		if has_idx:
+			offset += cells_num * offset_bytes
+		data_end = offset + total_cells_size
+		if data_end > len(boc_bytes):
+			raise Exception("Invalid BOC size")
+		cursor = offset
+		cells = []
+		for _ in range(cells_num):
+			refs_descriptor = boc_bytes[cursor]
+			bits_descriptor = boc_bytes[cursor + 1]
+			cursor += 2
+			refs_count = refs_descriptor & 0x07
+			data_bytes_len = (bits_descriptor + 1) // 2
+			cell_data = boc_bytes[cursor:cursor + data_bytes_len]
+			cursor += data_bytes_len
+			if bits_descriptor % 2 == 0:
+				bit_len = data_bytes_len * 8
+			else:
+				bit_len = data_bytes_len * 8 - self._count_trailing_zero_bits(cell_data[-1]) - 1
+			refs = []
+			for _ in range(refs_count):
+				ref_idx, cursor = self._read_be_uint(boc_bytes, cursor, size_bytes)
+				refs.append(ref_idx)
+			cells.append((cell_data, bit_len, refs))
+		if len(root_list) != 1:
+			raise Exception("Expected exactly one root cell")
+		return cells[root_list[0]]
+	#end define
+
+	def AddressFromSliceBoc(self, boc_bytes: bytes):
+		cell_data, bit_len, refs = self._extract_boc_root_cell_bits(boc_bytes)
+		if refs:
+			raise Exception("Address slice contains unexpected refs")
+		if bit_len < 267:
+			raise Exception("Address slice is too short")
+		bit_pos = 0
+
+		def read_bits(count: int):
+			nonlocal bit_pos
+			value = 0
+			for _ in range(count):
+				byte = cell_data[bit_pos // 8]
+				shift = 7 - (bit_pos % 8)
+				value = (value << 1) | ((byte >> shift) & 1)
+				bit_pos += 1
+			return value
+
+		tag = read_bits(2)
+		if tag != 0b10:
+			raise Exception(f"Unsupported address tag: {tag}")
+		anycast = read_bits(1)
+		if anycast != 0:
+			raise Exception("Anycast addresses are not supported")
+		workchain = read_bits(8)
+		if workchain >= 128:
+			workchain -= 256
+		addr_hash = "".join(f"{read_bits(8):02x}" for _ in range(32))
+		return raw_addr_to_b64(f"{workchain}:{addr_hash}")
+	#end define
+
+	@staticmethod
+	def _get_ton_http_stack_bytes(item, expected_types: tuple[str, ...]):
+		if not isinstance(item, list) or len(item) < 2:
+			raise Exception(f"Invalid ton-http-api stack item: {item}")
+		item_type = item[0]
+		if item_type not in expected_types:
+			raise Exception(f"Unexpected ton-http-api stack item type: {item_type}")
+		value = item[1]
+		if isinstance(value, dict):
+			value = value.get("bytes") or value.get("boc") or value.get("value")
+		if not isinstance(value, str):
+			raise Exception(f"Unsupported ton-http-api stack payload: {item}")
+		return base64.b64decode(value)
+	#end define
+
+	def GetLiquidPoolDeployData(self):
+		liquid_pool_addr = self.GetLiquidPoolAddr()
+		stack = self.RunTonHttpGetMethod(liquid_pool_addr, "get_pool_full_data_raw")
+		if len(stack) < 26:
+			raise Exception(f"GetLiquidPoolDeployData error: unexpected stack size: {len(stack)}")
+		governor = self.AddressFromSliceBoc(self._get_ton_http_stack_bytes(stack[20], ("slice", "cell")))
+		halter = self.AddressFromSliceBoc(self._get_ton_http_stack_bytes(stack[23], ("slice", "cell")))
+		approver = self.AddressFromSliceBoc(self._get_ton_http_stack_bytes(stack[24], ("slice", "cell")))
+		controller_code_bytes = self._get_ton_http_stack_bytes(stack[25], ("cell",))
+		controller_code_path = self.tempDir + self.nodeName + "controller-code.boc"
+		with open(controller_code_path, "wb") as file:
+			file.write(controller_code_bytes)
+		return {
+			"governor": governor,
+			"halter": halter,
+			"approver": approver,
+			"controller_code_path": controller_code_path,
+		}
+	#end define
+
+	def BuildLiquidStakingControllerStateInit(self, controller_id: int):
+		wallet = self.GetValidatorWallet()
+		liquid_pool_addr = self.GetLiquidPoolAddr()
+		deploy_data = self.GetLiquidPoolDeployData()
+		file_base = self.tempDir + self.nodeName + wallet.name + f"_controller{controller_id}"
+		with get_package_resource_path('mytoncore', 'contracts/lst-restricted-wallet/build-controller-init.fif') as fift_script:
+			args = [
+				fift_script,
+				deploy_data["controller_code_path"],
+				controller_id,
+				wallet.addrB64,
+				liquid_pool_addr,
+				deploy_data["governor"],
+				deploy_data["approver"],
+				deploy_data["halter"],
+				wallet.workchain,
+				file_base,
+			]
+			result = self.fift.run(args)
+		controller_addr = parse(result, "Bounceable address (for later access): ", "\n")
+		if controller_addr is None:
+			raise Exception(f"BuildLiquidStakingControllerStateInit error: failed to parse controller address: {result}")
+		init_boc_path = file_base + "-init.boc"
+		if not os.path.isfile(init_boc_path):
+			raise Exception(f"BuildLiquidStakingControllerStateInit error: init boc not found: {init_boc_path}")
+		return controller_addr.strip(), init_boc_path
+	#end define
+
+	def DirectDeployLiquidStakingController(self, controller_id: int, body_boc_path: str, value: float = 1):
+		wallet = self.GetValidatorWallet()
+		expected_controller_addr = self.GetControllerAddress(controller_id)
+		computed_controller_addr, init_boc_path = self.BuildLiquidStakingControllerStateInit(controller_id)
+		if computed_controller_addr != expected_controller_addr:
+			raise Exception(
+				f"DirectDeployLiquidStakingController error: computed address {computed_controller_addr} does not match pool address {expected_controller_addr}"
+			)
+		result_file_path = self.SignBocWithWallet(
+			wallet, body_boc_path, expected_controller_addr, value,
+			init_boc_path=init_boc_path, extra_flags=["-n"],
+		)
+		self.SendFile(result_file_path, wallet)
+		return expected_controller_addr
+	#end define
+
 	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
 		addr_hash = int(wallet.addr, 16)
@@ -3097,24 +3294,19 @@ class MyTonCore:
 	#end define
 
 	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
-		data = dict()
-		data["address"] = self.GetLiquidPoolAddr()
-		data["method"] = "calculate_loan_amount"
-		data["stack"] = [
-			["num", min_loan*10**9],
-			["num", max_loan*10**9],
-			["num", max_interest],
-		]
-		print(f"CalculateLoanAmount data: {data}")
-
-		url = "http://127.0.0.1:8801/runGetMethod"
-		res = requests.post(url, json=data, timeout=3)
-		res_data = res.json()
-		if res_data.get("ok") is False:
-			error = res_data.get("error")
-			raise Exception(error)
-		result = res_data.get("result").get("stack").pop().pop()
-		return result
+		stack = self.RunTonHttpGetMethod(
+			self.GetLiquidPoolAddr(),
+			"calculate_loan_amount",
+			stack=[
+				["num", min_loan * 10**9],
+				["num", max_loan * 10**9],
+				["num", max_interest],
+			],
+		)
+		result = stack[-1][1]
+		if isinstance(result, dict):
+			result = result.get("value") or result.get("num")
+		return int(result)
 	#end define
 
 	def WaitLoan(self, controllerAddr):

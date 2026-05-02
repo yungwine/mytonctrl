@@ -240,7 +240,7 @@ class WalletModule(MtcModule):
 
         seqno = str(self.ton.get_seqno(wallet))
         result_file_path = self.local.my_temp_dir + wallet.name + "_wallet-query"
-        if "v1" in wallet.version:
+        if wallet.version == "lst_restricted_wallet" or "v1" in wallet.version:
             fift_script = "wallet.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
         elif "v2" in wallet.version:
