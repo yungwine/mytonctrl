@@ -122,21 +122,21 @@ Recommendation:
 - verify against the actual pool/controller version in the target environment
 - especially if the pool repo or controller code was updated independently
 
-### E. `create_wallet` is intentionally not patched
-Current integration does **not** make `mytonctrl nw ...` create `lst_restricted_wallet`.
+### E. `create_wallet` is now supported, but has prerequisites
+This branch now supports:
+- `nw 0 <wallet_name> lst_restricted_wallet`
 
-Current expected flow:
-1. deploy restricted wallet separately
-2. point validator to that wallet
-3. set wallet version manually to `lst_restricted_wallet`
+However, creation requires:
+- `set liquid_pool_addr <pool>`
+- `set lst_restricted_wallet_treasury <treasury>`
+- working THA, because controller code is pulled from the configured pool during wallet creation
 
-This keeps the patch smaller, but should be documented for operators.
-
-### F. `wallet.version` must be set exactly
+### F. `wallet.version` must still be exactly `lst_restricted_wallet`
 The direct deploy branch activates only for:
 - `wallet.version == "lst_restricted_wallet"`
 
-If operator forgets to set it, `new_controllers` will use the old pool deploy path.
+Wallets created through the new path get that version automatically.
+Externally deployed wallets still need correct version assignment.
 
 ### G. No added support yet for config/elector body-aware permissioning
 This branch only integrates controller deployment assumptions.
@@ -227,3 +227,20 @@ If deposit/top-up to controller fails from the restricted wallet, the likely cau
    - keep out of this branch unless really needed
 
 3. later add governance/config/elector integration once restricted wallet policy for those destinations is finalized
+
+
+## Additional create_wallet support
+
+This branch now also supports `create_wallet` / `nw` for `lst_restricted_wallet`.
+
+Implementation details:
+- embedded compiled restricted-wallet code lives at `mytoncore/contracts/lst-restricted-wallet/wallet-code.boc`
+- custom init script lives at `mytoncore/contracts/lst-restricted-wallet/new-wallet.fif`
+- wallet creation pulls current controller code from the configured liquid pool via THA and stores its hash into wallet state
+- wallet creation requires setting `lst_restricted_wallet_treasury` before running `nw ... lst_restricted_wallet`
+
+Minimal operator sequence:
+1. `set liquid_pool_addr <pool>`
+2. `set lst_restricted_wallet_treasury <treasury>`
+3. ensure THA is enabled
+4. `nw 0 <wallet_name> lst_restricted_wallet`

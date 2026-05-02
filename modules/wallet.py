@@ -184,6 +184,27 @@ class WalletModule(MtcModule):
             raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
         return list(map(str, args))
 
+    def get_new_lst_restricted_wallet_fift_args(self, workchain: int, wallet_path: str) -> list[str]:
+        treasury_addr = self.ton.local.db.get("lst_restricted_wallet_treasury")
+        if treasury_addr is None:
+            raise Exception("CreateWallet error: set `lst_restricted_wallet_treasury` before creating lst_restricted_wallet")
+        liquid_pool_addr = self.ton.GetLiquidPoolAddr()
+        deploy_data = self.ton.GetLiquidPoolDeployData()
+        wallet_code_path = self.ton.contractsDir + "lst-restricted-wallet/wallet-code.boc"
+        if not os.path.isfile(wallet_code_path):
+            raise Exception(f"CreateWallet error: wallet code boc not found: {wallet_code_path}")
+        fift_script = "lst-restricted-wallet/new-wallet.fif"
+        args = [
+            fift_script,
+            wallet_code_path,
+            deploy_data["controller_code_path"],
+            treasury_addr,
+            liquid_pool_addr,
+            workchain,
+            wallet_path,
+        ]
+        return list(map(str, args))
+
     def _get_wallet_id(self, wallet: Wallet):
         subwallet = 698983191 + wallet.workchain  # 0x29A9A317 + workchain
         try:
@@ -200,8 +221,11 @@ class WalletModule(MtcModule):
         if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
             self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
         else:
-            fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
-                                                      wallet_path=wallet_path, subwallet=subwallet)
+            if version == "lst_restricted_wallet":
+                fift_args = self.get_new_lst_restricted_wallet_fift_args(workchain=workchain, wallet_path=wallet_path)
+            else:
+                fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
+                                                          wallet_path=wallet_path, subwallet=subwallet)
             result = self.ton.fift.run(fift_args)
             if "Creating new" not in result:
                 raise Exception(f"CreateWallet error: {result}")
