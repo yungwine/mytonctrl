@@ -124,12 +124,9 @@ Recommendation:
 
 ### E. `create_wallet` is now supported, but has prerequisites
 This branch now supports:
-- `nw 0 <wallet_name> lst_restricted_wallet`
+- `nw 0 <wallet_name> lst_restricted_wallet <treasury_addr> <liquid_pool_addr>`
 
-However, creation requires:
-- `set liquid_pool_addr <pool>`
-- `set lst_restricted_wallet_treasury <treasury>`
-- working THA, because controller code is pulled from the configured pool during wallet creation
+Creation requires working THA, because controller code is pulled from the explicitly provided pool during wallet creation.
 
 ### F. `wallet.version` must still be exactly `lst_restricted_wallet`
 The direct deploy branch activates only for:
@@ -153,7 +150,7 @@ That is expected for current scope.
 3. validator uses that wallet address
 4. wallet version set to `lst_restricted_wallet`
 5. THA enabled and healthy
-6. liquid pool address configured in mytonctrl
+6. liquid pool address known for wallet creation and later configured in mytonctrl for liquid-staking runtime
 7. wallet funded with enough TON for:
    - 2 controller deploys
    - future controller top-ups / operations
@@ -236,11 +233,9 @@ This branch now also supports `create_wallet` / `nw` for `lst_restricted_wallet`
 Implementation details:
 - embedded compiled restricted-wallet code lives at `mytoncore/contracts/lst-restricted-wallet/wallet-code.boc`
 - custom init script lives at `mytoncore/contracts/lst-restricted-wallet/new-wallet.fif`
-- wallet creation pulls current controller code from the configured liquid pool via THA and stores its hash into wallet state
-- wallet creation requires setting `lst_restricted_wallet_treasury` before running `nw ... lst_restricted_wallet`
+- wallet creation pulls current controller code from the explicitly provided liquid pool via THA and stores its hash into wallet state
+- wallet creation requires explicit `<treasury_addr>` and `<liquid_pool_addr>` arguments
 
 Minimal operator sequence:
-1. `set liquid_pool_addr <pool>`
-2. `set lst_restricted_wallet_treasury <treasury>`
-3. ensure THA is enabled
-4. `nw 0 <wallet_name> lst_restricted_wallet`
+1. ensure THA is enabled
+2. `nw 0 <wallet_name> lst_restricted_wallet <treasury_addr> <liquid_pool_addr>`

@@ -39,9 +39,11 @@ class WalletModule(MtcModule):
         return wallet_name
 
     def create_new_wallet(self, args):
-        if not check_usage_args_lens("nw", args, [0, 2, 3, 4]):
+        if not check_usage_args_lens("nw", args, [0, 2, 3, 4, 5]):
             return
         version = "v1"
+        treasury_addr = None
+        liquid_pool_addr = None
         if len(args) == 0:
             wallet_name = self.generate_wallet_name()
             workchain = 0
@@ -50,11 +52,23 @@ class WalletModule(MtcModule):
             wallet_name = args[1]
         if len(args) > 2:
             version = args[2]
-        if len(args) == 4:
-            subwallet = int(args[3])
+        if version == "lst_restricted_wallet":
+            if len(args) != 5:
+                raise Exception("CreateWallet error: usage for lst_restricted_wallet is `nw <workchain> <wallet_name> lst_restricted_wallet <treasury_addr> <liquid_pool_addr>`")
+            treasury_addr = args[3]
+            liquid_pool_addr = args[4]
+            subwallet = 698983191 + workchain  # unused for lst_restricted_wallet, kept for signature compatibility
         else:
-            subwallet = 698983191 + workchain  # 0x29A9A317 + workchain
-        wallet = self.create_wallet(wallet_name, workchain, version, subwallet=subwallet)
+            if len(args) > 4:
+                raise Exception(f"CreateWallet error: unexpected extra arguments for wallet version `{version}`")
+            if len(args) == 4:
+                subwallet = int(args[3])
+            else:
+                subwallet = 698983191 + workchain  # 0x29A9A317 + workchain
+        wallet = self.create_wallet(
+            wallet_name, workchain, version, subwallet=subwallet,
+            treasury_addr=treasury_addr, liquid_pool_addr=liquid_pool_addr,
+        )
         table = list()
         table += [["Name", "Workchain", "Address"]]
         table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
@@ -184,12 +198,8 @@ class WalletModule(MtcModule):
             raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
         return list(map(str, args))
 
-    def get_new_lst_restricted_wallet_fift_args(self, workchain: int, wallet_path: str) -> list[str]:
-        treasury_addr = self.ton.local.db.get("lst_restricted_wallet_treasury")
-        if treasury_addr is None:
-            raise Exception("CreateWallet error: set `lst_restricted_wallet_treasury` before creating lst_restricted_wallet")
-        liquid_pool_addr = self.ton.GetLiquidPoolAddr()
-        deploy_data = self.ton.GetLiquidPoolDeployData()
+    def get_new_lst_restricted_wallet_fift_args(self, workchain: int, wallet_path: str, treasury_addr: str, liquid_pool_addr: str) -> list[str]:
+        deploy_data = self.ton.GetLiquidPoolDeployData(liquid_pool_addr)
         wallet_code_path = self.ton.contractsDir + "lst-restricted-wallet/wallet-code.boc"
         if not os.path.isfile(wallet_code_path):
             raise Exception(f"CreateWallet error: wallet code boc not found: {wallet_code_path}")
@@ -213,7 +223,7 @@ class WalletModule(MtcModule):
             self.local.add_log(f"Error getting wallet id: {e}", "error")
         return int(subwallet)
 
-    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1", subwallet: int | None = None) -> Wallet:
+    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1", subwallet: int | None = None, treasury_addr: str | None = None, liquid_pool_addr: str | None = None) -> Wallet:
         subwallet_default = 698983191 + workchain  # 0x29A9A317 + workchain
         if subwallet is None:
             subwallet = subwallet_default
@@ -222,7 +232,12 @@ class WalletModule(MtcModule):
             self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
         else:
             if version == "lst_restricted_wallet":
-                fift_args = self.get_new_lst_restricted_wallet_fift_args(workchain=workchain, wallet_path=wallet_path)
+                if treasury_addr is None or liquid_pool_addr is None:
+                    raise Exception("CreateWallet error: lst_restricted_wallet requires explicit treasury_addr and liquid_pool_addr")
+                fift_args = self.get_new_lst_restricted_wallet_fift_args(
+                    workchain=workchain, wallet_path=wallet_path,
+                    treasury_addr=treasury_addr, liquid_pool_addr=liquid_pool_addr,
+                )
             else:
                 fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
                                                           wallet_path=wallet_path, subwallet=subwallet)

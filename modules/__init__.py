@@ -43,7 +43,6 @@ SETTINGS = {
     'maxFactor': Setting('validator', None, 'Param send to Elector. if null will be taken from 17 config param'),
     'participateBeforeEnd': Setting('validator', None, 'Amount of seconds before start of round to participate'),
     'liquid_pool_addr': Setting('liquid-staking', None, 'Liquid staking pool address'),
-    'lst_restricted_wallet_treasury': Setting('liquid-staking', None, 'Treasury address for lst_restricted_wallet creation'),
     'min_loan': Setting('liquid-staking', 41000, 'Min loan amount'),
     'max_loan': Setting('liquid-staking', 43000, 'Max loan amount'),
     'max_interest_percent': Setting('liquid-staking', 10, 'Max interest percent'),

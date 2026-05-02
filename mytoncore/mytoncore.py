@@ -3109,8 +3109,9 @@ class MyTonCore:
 		return base64.b64decode(value)
 	#end define
 
-	def GetLiquidPoolDeployData(self):
-		liquid_pool_addr = self.GetLiquidPoolAddr()
+	def GetLiquidPoolDeployData(self, liquid_pool_addr: str | None = None):
+		if liquid_pool_addr is None:
+			liquid_pool_addr = self.GetLiquidPoolAddr()
 		stack = self.RunTonHttpGetMethod(liquid_pool_addr, "get_pool_full_data_raw")
 		if len(stack) < 26:
 			raise Exception(f"GetLiquidPoolDeployData error: unexpected stack size: {len(stack)}")
