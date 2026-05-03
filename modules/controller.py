@@ -32,13 +32,19 @@ class ControllerModule(MtcModule):
         if not os.path.isdir(contract_path):
             self.ton.DownloadContract("https://github.com/igroman787/jetton_pool")
 
-        file_name0 = contract_path + "fift-scripts/deploy_controller0.boc"
-        file_name1 = contract_path + "fift-scripts/deploy_controller1.boc"
-        result_file_path0 = self.ton.SignBocWithWallet(wallet, file_name0, liquid_pool_addr, 1)
-        self.ton.SendFile(result_file_path0, wallet)
-        time.sleep(10)
-        result_file_path1 = self.ton.SignBocWithWallet(wallet, file_name1, liquid_pool_addr, 1)
-        self.ton.SendFile(result_file_path1, wallet)
+        if wallet.version == "lst_restricted_wallet":
+            body_boc_path = contract_path + "fift-scripts/top-up.boc"
+            self.ton.DirectDeployLiquidStakingController(0, body_boc_path, value=1)
+            time.sleep(10)
+            self.ton.DirectDeployLiquidStakingController(1, body_boc_path, value=1)
+        else:
+            file_name0 = contract_path + "fift-scripts/deploy_controller0.boc"
+            file_name1 = contract_path + "fift-scripts/deploy_controller1.boc"
+            result_file_path0 = self.ton.SignBocWithWallet(wallet, file_name0, liquid_pool_addr, 1)
+            self.ton.SendFile(result_file_path0, wallet)
+            time.sleep(10)
+            result_file_path1 = self.ton.SignBocWithWallet(wallet, file_name1, liquid_pool_addr, 1)
+            self.ton.SendFile(result_file_path1, wallet)
 
         self.ton.local.db["old_controllers"] = old_controllers
         self.ton.local.db["using_controllers"] = new_controllers
