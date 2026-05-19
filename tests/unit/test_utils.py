@@ -48,7 +48,6 @@ result:  [ 1 6 665228138946717 45686556 756548789897867565 1000 10 1000000000000
 def test_tlb2json():
     text = 'param = x{DEAD}\nignored'
     res = tlb_to_json(text)
-    print(res)
     assert isinstance(res, dict) and res.get('_') == 'x{DEAD}'
 
     text = 'ConfigParam(15) = ( validators_elected_for:7200 elections_start_before:2400 elections_end_before:180 stake_held_for:900)'
