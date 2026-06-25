@@ -8,7 +8,7 @@ from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_
 
 class NominatorPoolModule(PoolModule):
 
-    description = 'Standard nominator pools.'
+    description = 'Standard nominator pool - DEPRECATED'
     default_value = False
 
     def do_create_pool(self, pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake,

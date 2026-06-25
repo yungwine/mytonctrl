@@ -90,6 +90,44 @@ class Pool(_HasAddress):
 
 
 @dataclass
+class PoolDataV2:
+    pool_id: int
+    halted: bool
+    owner_share: int
+    pool_supply: int
+    round_closed: bool
+    round_index: int
+    validators_cell: Any
+    nominators_cell: Any
+    max_nominators: int
+    nominators_amount: int
+    pending_deposits: int
+    pending_withdrawals: int
+
+
+@dataclass
+class LimitsPerValidatorV2:
+    min_ton_per_validator: int
+    max_ton_per_validator: int
+    max_refund_amount: int
+
+
+@dataclass
+class ValidatorInfoV2:
+    is_banned: bool
+    usage_state: int
+    even_proxy: str | None
+    odd_proxy: str | None
+    refund_amount: int
+    round_parity: int
+    cur_rotation_time: int | None
+    prev_rotation_time: int | None
+    stakeable: int
+    round_index: int
+    rotated: bool
+
+
+@dataclass
 class Block:
     workchain: int
     shardchain: str
