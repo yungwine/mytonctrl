@@ -113,6 +113,15 @@ class LimitsPerValidatorV2:
 
 
 @dataclass
+class UsageRecordV2:
+    proxy_addr: str | None
+    held_for: int
+    ton_used: int
+    rotation_time: int
+    rotation_count: int
+
+
+@dataclass
 class ValidatorInfoV2:
     is_banned: bool
     usage_state: int
@@ -120,8 +129,8 @@ class ValidatorInfoV2:
     odd_proxy: str | None
     refund_amount: int
     round_parity: int
-    cur_rotation_time: int | None
-    prev_rotation_time: int | None
+    cur_round_usage: UsageRecordV2 | None
+    prev_round_usage: UsageRecordV2 | None
     stakeable: int
     round_index: int
     rotated: bool

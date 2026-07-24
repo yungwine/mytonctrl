@@ -108,9 +108,9 @@ def test_get_limits_per_validator_v2(ton: MyTonCore, monkeypatch):
 
 def test_get_validator_info_v2(ton: MyTonCore, monkeypatch):
     validator = f"0 2 {int(PROXY_E_HASH, 16)} {int(PROXY_O_HASH, 16)} (null) 0 303000000000 3"
-    # cur/prev round usage records (slots 8..23): only rotation.rotationTime (base+5) and
-    # the present_flag (base+7) are parsed; the rest is opaque filler here.
-    cur = f"{int(PROXY_O_HASH, 16)} 86400 150000000000000 {MC_SLICE} 123456789 1700000000 1 -1"
+    # cur/prev round usage records (slots 8..23): proxy, heldFor, tonUsed, validator,
+    # rotation.{vsetHash, rotationTime, rotationCount}, trailing present_flag.
+    cur = f"{int(PROXY_O_HASH, 16)} 86400 150000000000000 {MC_SLICE} 123456789 1700000000 2 -1"
     prev = "(null) (null) (null) (null) (null) (null) (null) 0"
     seen = []
     _stub(ton, monkeypatch, {"get_validator_info_mtc":
@@ -126,8 +126,14 @@ def test_get_validator_info_v2(ton: MyTonCore, monkeypatch):
     # proxy hash ints resolve to masterchain addresses
     assert info.even_proxy == raw_addr_to_b64('-1:' + PROXY_E_HASH)
     assert info.odd_proxy == raw_addr_to_b64('-1:' + PROXY_O_HASH)
-    assert info.cur_rotation_time == 1700000000   # rotation.rotationTime of the cur record
-    assert info.prev_rotation_time is None        # present_flag == 0 -> not staked in prev
+    assert info.prev_round_usage is None          # present_flag == 0 -> not staked in prev
+    cur_usage = info.cur_round_usage
+    assert cur_usage is not None
+    assert cur_usage.proxy_addr == raw_addr_to_b64('-1:' + PROXY_O_HASH)
+    assert cur_usage.held_for == 86400
+    assert cur_usage.ton_used == 150000000000000
+    assert cur_usage.rotation_time == 1700000000
+    assert cur_usage.rotation_count == 2
     assert info.stakeable == 250000000000000
     assert info.round_index == 7
     assert info.rotated is True
@@ -453,8 +459,13 @@ def test_import_pool_downloads_v1_scripts_only_for_v1_modes(ton: MyTonCore, monk
     assert downloads == [1]                                    # v1 mode still gets the scripts
 
 
+def _usage(proxy, rotation_time, rotation_count, held_for=9000):
+    return _Obj(proxy_addr=proxy, held_for=held_for, ton_used=10**14,
+                rotation_time=rotation_time, rotation_count=rotation_count)
+
+
 def test_pool_v2_update_vset_gate_and_recovery(ton: MyTonCore, monkeypatch):
-    vset_calls, recover_calls = [], []
+    vset_calls, recover_calls, elector_queries = [], [], []
     monkeypatch.setattr(ton, "pool_send_update_vset_v2", lambda p, w: vset_calls.append(p))
     monkeypatch.setattr(
         ton,
@@ -462,34 +473,54 @@ def test_pool_v2_update_vset_gate_and_recovery(ton: MyTonCore, monkeypatch):
         lambda p, w: recover_calls.append((p, w)),
     )
     monkeypatch.setattr(ton, "GetFullElectorAddr", lambda: "Ef-elector")
-    returned = {"Ef-even": 0.0, "Ef-odd": 0.0}
-    monkeypatch.setattr(ton, "get_returned_stake", lambda elector, addr: returned[addr])
+    returned = {"Ef-even": 1234.5, "Ef-odd": 1234.5}
+    def get_returned_stake(elector, addr):
+        elector_queries.append(addr)
+        return returned[addr]
+    monkeypatch.setattr(ton, "get_returned_stake", get_returned_stake)
     info = _Obj(even_proxy="Ef-even", odd_proxy="Ef-odd",
-                cur_rotation_time=None, prev_rotation_time=None)
+                cur_round_usage=None, prev_round_usage=None)
     monkeypatch.setattr(ton, "get_validator_info_v2", lambda p, v: info)
     pool, wallet = _Obj(addrB64="EQpool"), _Obj(addrB64="Ef-validator")
+    now = int(time.time())
 
-    # no records of ours, nothing at the elector -> fully quiet
+    # no stake records of ours -> fully quiet, the elector is not even queried
     ton.pool_update_validator_set_v2(pool, wallet)
-    assert vset_calls == [] and recover_calls == []
+    assert vset_calls == [] and recover_calls == [] and elector_queries == []
 
     # wind-down with a rotation pending: the getter PROJECTS the rotation, stamping
-    # rotationTime with the query moment (i.e. "now"). Recovery would bounce
-    # RoundTooEarly (rotationCount not yet advanced on-chain), so the cron pushes
-    # UpdateVset instead and defers recovery to a later tick.
-    info.prev_rotation_time = int(time.time()) - 5
-    returned["Ef-odd"] = 1234.5
+    # rotationTime with the query moment (i.e. "now"). A refused recovery would not
+    # persist the rotation, so the cron pushes UpdateVset instead and defers recovery.
+    info.prev_round_usage = _usage("Ef-odd", now - 5, 2)
     ton.pool_update_validator_set_v2(pool, wallet)
     assert vset_calls == ["EQpool"] and recover_calls == []
 
-    # the push was processed: the stamp froze at the (long past) processing moment ->
-    # gate quiet, recovery proceeds
-    info.prev_rotation_time = int(time.time()) - 10_000
+    # stamp is stale (materialized long ago) but the record has seen only one
+    # materialized vset change -> the pool would refuse with RoundTooEarly, don't send
+    info.prev_round_usage = _usage("Ef-odd", now - 10_000, 1)
     ton.pool_update_validator_set_v2(pool, wallet)
-    assert vset_calls == ["EQpool"]
+    assert vset_calls == ["EQpool"] and recover_calls == []
+
+    # rotationCount == 2 and heldFor + 60 not yet elapsed since the second rotation ->
+    # RecoveryTimeTooEarly, don't send (the v1 analog: validatorSetChangeTime gate)
+    info.prev_round_usage = _usage("Ef-odd", now - 5_000, 2, held_for=9_000)
+    ton.pool_update_validator_set_v2(pool, wallet)
+    assert recover_calls == []
+
+    # rotationCount == 2 and the hold period has passed -> recovery proceeds
+    info.prev_round_usage = _usage("Ef-odd", now - 10_000, 2, held_for=9_000)
+    ton.pool_update_validator_set_v2(pool, wallet)
     assert recover_calls == [("EQpool", wallet)]
 
-    # Even if both proxies have returned stake, send only one recovery message per tick.
-    returned["Ef-even"] = 1234.5
+    # rotationCount > 2 -> no timestamp requirement, recovery proceeds
+    info.prev_round_usage = _usage("Ef-odd", now - 100, 3)
     ton.pool_update_validator_set_v2(pool, wallet)
-    assert recover_calls == [("EQpool", wallet), ("EQpool", wallet)]
+    assert recover_calls == [("EQpool", wallet)] * 2
+
+    # both rounds hold records with returned stake: the pool acts on the prev-round
+    # record first, so query/recover only that one -> one recovery message per tick
+    elector_queries.clear()
+    info.cur_round_usage = _usage("Ef-even", now - 100, 3)
+    ton.pool_update_validator_set_v2(pool, wallet)
+    assert recover_calls == [("EQpool", wallet)] * 3
+    assert elector_queries == ["Ef-odd"]

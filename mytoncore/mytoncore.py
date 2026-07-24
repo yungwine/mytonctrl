@@ -59,6 +59,7 @@ from mytoncore.models import (
     PoolDataV2,
     LimitsPerValidatorV2,
     ValidatorInfoV2,
+    UsageRecordV2,
 )
 
 from mypylib.mypylib import (
@@ -1087,7 +1088,7 @@ class MyTonCore:
 
 		# Create fift's. Continue with pool or walet
 		if usePoolV2:
-			assert pool is not None  # set above in the usePoolV2 branch (which raises otherwise)
+			assert pool is not None
 			proxy_addr = self.get_validator_proxy_v2(pool.addrB64, wallet.addrB64)
 			var1 = self.CreateElectionRequest(proxy_addr, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validator_key, var1)
@@ -2514,7 +2515,7 @@ class MyTonCore:
 	def get_limits_per_validator_v2(self, pool_addr: str) -> LimitsPerValidatorV2:
 		stack = self.run_get_method(pool_addr, "get_limits_per_validator")
 		if len(stack) < 3:
-			raise Exception(f"GetLimitsPerValidatorV2 error: expected 3 stack items, got {len(stack)}: {stack}")
+			raise Exception(f"expected 3 stack items, got {len(stack)}: {stack}")
 		return LimitsPerValidatorV2(
 			min_ton_per_validator=int(stack[0]),
 			max_ton_per_validator=int(stack[1]),
@@ -2527,10 +2528,16 @@ class MyTonCore:
 		if len(stack) < 27:
 			raise Exception(f"expected 27 stack items, got {len(stack)}: {stack}")
 
-		def _rotation_time(base: int) -> int | None:
+		def _usage_record(base: int) -> UsageRecordV2 | None:
 			if int(stack[base + 7]) == 0:
 				return None
-			return int(stack[base + 5])
+			return UsageRecordV2(
+				proxy_addr=parse_mc_addr_from_vm_int(stack[base]),
+				held_for=int(stack[base + 1]),
+				ton_used=int(stack[base + 2]),
+				rotation_time=int(stack[base + 5]),
+				rotation_count=int(stack[base + 6]),
+			)
 
 		return ValidatorInfoV2(
 			is_banned=int(stack[0]) != 0,
@@ -2539,8 +2546,8 @@ class MyTonCore:
 			odd_proxy=parse_mc_addr_from_vm_int(stack[3]),
 			refund_amount=int(stack[6]),
 			round_parity=int(stack[7]),
-			cur_rotation_time=_rotation_time(8),
-			prev_rotation_time=_rotation_time(16),
+			cur_round_usage=_usage_record(8),
+			prev_round_usage=_usage_record(16),
 			stakeable=int(stack[24]),
 			round_index=int(stack[25]),
 			rotated=int(stack[26]) != 0,
@@ -2599,21 +2606,23 @@ class MyTonCore:
 		pool_addr = pool.addrB64
 		validator_info = self.get_validator_info_v2(pool_addr, wallet.addrB64)
 		now = int(time.time())
-		rotation_pending = any(
-			t is not None and now - t < 60
-			for t in (validator_info.cur_rotation_time, validator_info.prev_rotation_time)
-		)
+		records = (validator_info.cur_round_usage, validator_info.prev_round_usage)
+		rotation_pending = any(r is not None and now - r.rotation_time < 60 for r in records)
 		if rotation_pending:
 			self.pool_send_update_vset_v2(pool_addr, wallet)
-			return  # recovery would bounce until the rotation lands; retry next tick
+			return
 
-		full_elector_addr = self.GetFullElectorAddr()
-		for proxy_addr in (validator_info.even_proxy, validator_info.odd_proxy):
-			if proxy_addr is None:
-				continue
-			if self.get_returned_stake(full_elector_addr, proxy_addr) > 0:
-				self.pool_send_recover_stake_v2(pool_addr, wallet)
-				break
+		target = validator_info.prev_round_usage or validator_info.cur_round_usage
+		if target is None:
+			return
+		if target.rotation_count < 2:
+			return  # RoundTooEarly
+		if target.rotation_count == 2 and now <= target.rotation_time + target.held_for + 60:
+			self.local.add_log(f"pool {pool_addr}: stake held until " +
+			                   f"{target.rotation_time + target.held_for + 60}", "debug")
+			return  # RecoveryTimeTooEarly
+		if target.proxy_addr is not None and self.get_returned_stake(self.GetFullElectorAddr(), target.proxy_addr) > 0:
+			self.pool_send_recover_stake_v2(pool_addr, wallet)
 
 	def pool_send_update_vset_v2(self, pool_addr: str, wallet: Wallet) -> None:
 		result_file_path = self.tempDir + "v2-update-vset-query.boc"
