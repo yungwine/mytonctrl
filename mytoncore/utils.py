@@ -230,6 +230,6 @@ def parse_mc_addr_from_vm_int(item: str | None) -> str | None:
     if item is None:
         return None
     item = item.strip()
-    if item == '' or 'null' in item.lower():
+    if item in ('', '()') or 'null' in item.lower():
         return None
     return raw_addr_to_b64(f"-1:{int(item):064x}")

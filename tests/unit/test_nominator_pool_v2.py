@@ -33,12 +33,15 @@ MC_SLICE = lc_slice(-1, MC_HASH)
 MC_ADDR = raw_addr_to_b64('-1:' + MC_HASH)
 PROXY_E_HASH = '33' * 32
 PROXY_O_HASH = '44' * 32
-POOL_V2_CODE_HASH = '85e9b4d8fd881757ee011a9dc2d3fe4abd06968b72a1d68916f6428619b477b0'
+POOL_V2_CODE_HASH = '667ff713562a9a581927494e85b01fb835e454cb45fe87a2cbbdc560338e5570'
 
 
 def test_parse_mc_addr_from_vm_int():
     # v2 proxies come back as bare uint256 hash ints; the workchain is always -1.
     assert parse_mc_addr_from_vm_int(str(int(MC_HASH, 16))) == MC_ADDR
+    # lite-client prints a null stack entry as '()'; '(null)' is the StackEntry::dump
+    # spelling that shows up in other lite-client output.
+    assert parse_mc_addr_from_vm_int("()") is None
     assert parse_mc_addr_from_vm_int("(null)") is None
     assert parse_mc_addr_from_vm_int(None) is None
     # short hashes zero-pad to the full 64 hex chars
@@ -99,19 +102,19 @@ def test_get_pool_data_v2_bool_is_minus_one(ton: MyTonCore, monkeypatch):
 
 
 def test_get_limits_per_validator_v2(ton: MyTonCore, monkeypatch):
-    _stub(ton, monkeypatch, {"get_limits_per_validator": "100000000000 1000000000000000 5000000000"})
+    _stub(ton, monkeypatch, {"get_limits_per_validator": "100000000000 1000000000000000 3000000000"})
     limits = ton.get_limits_per_validator_v2("EQpool")
     assert limits.min_ton_per_validator == 100000000000
     assert limits.max_ton_per_validator == 1000000000000000
-    assert limits.max_refund_amount == 5000000000
+    assert limits.refund_bonus == 3000000000
 
 
 def test_get_validator_info_v2(ton: MyTonCore, monkeypatch):
-    validator = f"0 2 {int(PROXY_E_HASH, 16)} {int(PROXY_O_HASH, 16)} (null) 0 303000000000 3"
-    # cur/prev round usage records (slots 8..23): proxy, heldFor, tonUsed, validator,
+    validator = f"0 2 {int(PROXY_E_HASH, 16)} {int(PROXY_O_HASH, 16)} () 0 3"
+    # cur/prev round usage records (slots 7..22): proxy, heldFor, tonUsed, validator,
     # rotation.{vsetHash, rotationTime, rotationCount}, trailing present_flag.
     cur = f"{int(PROXY_O_HASH, 16)} 86400 150000000000000 {MC_SLICE} 123456789 1700000000 2 -1"
-    prev = "(null) (null) (null) (null) (null) (null) (null) 0"
+    prev = "() () () () () () () 0"
     seen = []
     _stub(ton, monkeypatch, {"get_validator_info_mtc":
           f"{validator} {cur} {prev} 250000000000000 7 -1"},
@@ -122,7 +125,6 @@ def test_get_validator_info_v2(ton: MyTonCore, monkeypatch):
     assert info.is_banned is False
     assert info.usage_state == 2
     assert info.round_parity == 3
-    assert info.refund_amount == 303000000000
     # proxy hash ints resolve to masterchain addresses
     assert info.even_proxy == raw_addr_to_b64('-1:' + PROXY_E_HASH)
     assert info.odd_proxy == raw_addr_to_b64('-1:' + PROXY_O_HASH)
@@ -140,9 +142,10 @@ def test_get_validator_info_v2(ton: MyTonCore, monkeypatch):
 
 
 def test_get_validator_info_v2_null_odd_proxy(ton: MyTonCore, monkeypatch):
-    # A validator allowed only in even rounds (roundParity=2) has no odd proxy: null slot.
-    validator = f"0 0 {int(PROXY_E_HASH, 16)} (null) (null) 0 0 2"
-    no_usage = "(null) (null) (null) (null) (null) (null) (null) 0"
+    # A validator allowed only in even rounds (roundParity=2) has no odd proxy: the
+    # contract's deployProxy only sets the allowed parity, so lite-client prints '()'.
+    validator = f"0 0 {int(PROXY_E_HASH, 16)} () () 0 2"
+    no_usage = "() () () () () () () 0"
     _stub(ton, monkeypatch, {"get_validator_info_mtc": f"{validator} {no_usage} {no_usage} 0 8 0"})
     info = ton.get_validator_info_v2("EQpool", MC_ADDR)
     assert info.even_proxy == raw_addr_to_b64('-1:' + PROXY_E_HASH)
@@ -170,11 +173,12 @@ def test_get_validator_proxy_v2_uses_projected_round(ton: MyTonCore, monkeypatch
 
 
 def test_get_validator_info_v2_old_25_item_stack_raises(ton: MyTonCore, monkeypatch):
-    # The previous contract response has no projected round index and must be rejected.
-    validator = f"0 2 {int(PROXY_E_HASH, 16)} {int(PROXY_O_HASH, 16)} (null) 0 0 3"
-    no_usage = "(null) (null) (null) (null) (null) (null) (null) 0"
+    # A pre-projected-round contract response (8-slot validator with refundAmount,
+    # no roundIndex/rotated tail) is too short and must be rejected.
+    validator = f"0 2 {int(PROXY_E_HASH, 16)} {int(PROXY_O_HASH, 16)} () 0 0 3"
+    no_usage = "() () () () () () () 0"
     _stub(ton, monkeypatch, {"get_validator_info_mtc": f"{validator} {no_usage} {no_usage} 0"})
-    with pytest.raises(Exception, match="expected 27 stack items"):
+    with pytest.raises(Exception, match="expected 26 stack items"):
         ton.get_validator_info_v2("EQpool", MC_ADDR)
 
 
@@ -203,7 +207,7 @@ def _stake_stubs(ton, monkeypatch, stakeable, min_ton=10000, validating=False):
     monkeypatch.setattr(ton, "get_limits_per_validator_v2",
                         lambda a: _Obj(min_ton_per_validator=min_ton * 10**9,
                                        max_ton_per_validator=1000000 * 10**9,
-                                       max_refund_amount=5 * 10**9))
+                                       refund_bonus=3 * 10**9))
     monkeypatch.setattr(ton, "GetValidatorWallet", lambda: _Obj(addrB64=MC_ADDR))
     monkeypatch.setattr(ton, "GetValidatorConfig",
                         lambda: _Obj(validators=["adnl"] if validating else []))

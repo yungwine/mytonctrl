@@ -109,7 +109,7 @@ class PoolDataV2:
 class LimitsPerValidatorV2:
     min_ton_per_validator: int
     max_ton_per_validator: int
-    max_refund_amount: int
+    refund_bonus: int
 
 
 @dataclass
@@ -127,7 +127,6 @@ class ValidatorInfoV2:
     usage_state: int
     even_proxy: str | None
     odd_proxy: str | None
-    refund_amount: int
     round_parity: int
     cur_round_usage: UsageRecordV2 | None
     prev_round_usage: UsageRecordV2 | None

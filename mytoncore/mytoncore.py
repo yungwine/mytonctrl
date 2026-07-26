@@ -383,7 +383,7 @@ class MyTonCore:
 		arr["v4"] = "7ae380664c513769eaa5c94f9cd5767356e3f7676163baab66a4b73d5edab0e5"
 		arr["hv1"] = "fc8e48ed7f9654ba76757f52cc6031b2214c02fab9e429ffa0340f5575f9f29c"
 		arr["pool"] = "399838da9489139680e90fd237382e96ba771fdf6ea27eb7d513965b355038b4"
-		arr["npool_v2"] = "85e9b4d8fd881757ee011a9dc2d3fe4abd06968b72a1d68916f6428619b477b0"
+		arr["npool_v2"] = "667ff713562a9a581927494e85b01fb835e454cb45fe87a2cbbdc560338e5570"
 		arr["spool"] = "fc2ae44bcaedfa357d0091769aabbac824e1c28f14cc180c0b52a57d83d29054"
 		arr["spool_r2"] = "42bea8fea43bf803c652411976eb2981b9bdb10da84eb788a63ea7a01f2a044d"
 		arr["liquid_pool_r1"] = "82bc5760719c34395f80df76c42dc5d287f08f6562c643601ebed6944302dcc2"
@@ -2519,14 +2519,14 @@ class MyTonCore:
 		return LimitsPerValidatorV2(
 			min_ton_per_validator=int(stack[0]),
 			max_ton_per_validator=int(stack[1]),
-			max_refund_amount=int(stack[2]),
+			refund_bonus=int(stack[2]),
 		)
 
 	def get_validator_info_v2(self, pool_addr: str, validator_addr: str) -> ValidatorInfoV2:
 		workchain, addr_hex = self.ParseInputAddr(validator_addr)
 		stack = self.run_get_method_local(pool_addr, f"get_validator_info_mtc {workchain} 0x{addr_hex}")
-		if len(stack) < 27:
-			raise Exception(f"expected 27 stack items, got {len(stack)}: {stack}")
+		if len(stack) < 26:
+			raise Exception(f"expected 26 stack items, got {len(stack)}: {stack}")
 
 		def _usage_record(base: int) -> UsageRecordV2 | None:
 			if int(stack[base + 7]) == 0:
@@ -2544,13 +2544,12 @@ class MyTonCore:
 			usage_state=int(stack[1]),
 			even_proxy=parse_mc_addr_from_vm_int(stack[2]),
 			odd_proxy=parse_mc_addr_from_vm_int(stack[3]),
-			refund_amount=int(stack[6]),
-			round_parity=int(stack[7]),
-			cur_round_usage=_usage_record(8),
-			prev_round_usage=_usage_record(16),
-			stakeable=int(stack[24]),
-			round_index=int(stack[25]),
-			rotated=int(stack[26]) != 0,
+			round_parity=int(stack[6]),
+			cur_round_usage=_usage_record(7),
+			prev_round_usage=_usage_record(15),
+			stakeable=int(stack[23]),
+			round_index=int(stack[24]),
+			rotated=int(stack[25]) != 0,
 		)
 
 	def get_validator_proxy_v2(self, pool_addr: str, validator_addr: str) -> str:
