@@ -2137,31 +2137,22 @@ class MyTonCore:
 				destination = wallet.addrB64
 		return destination
 
-	def ParseAddrB64(self, addrB64):
+	def ParseAddrB64(self, addr_b64: str):
 		# Get buffer
-		fname = addrB64
+		fname = addr_b64
 		buff = self.GetFunctionBuffer(fname, timeout=1)
 		if buff:
 			return buff
 
-		buff = addrB64.replace('-', '+')
+		buff = addr_b64.replace('-', '+')
 		buff = buff.replace('_', '/')
 		buff = buff.encode()
 		b = base64.b64decode(buff)
-		testnet_int = (b[0] & 0x80)
-		if testnet_int == 0:
-			testnet = False
-		else:
-			testnet = True
 		bounceable_int = (b[0] & 0x40)
 		if bounceable_int != 0:
 			bounceable = False
 		else:
 			bounceable = True
-		networkTestnet = self.IsTestnet()
-		if testnet != networkTestnet:
-			text = f"ParseAddrB64 warning: testnet flag do not match. Addr: {testnet}, Network: {networkTestnet}"
-			self.local.add_log(text, "warning")
 
 		# get wc and addr
 		workchain_bytes = b[1:2]
