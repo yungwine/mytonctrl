@@ -130,8 +130,8 @@ class ValidatorModule(MtcModule):
 
         text = f"""
 <b>Penalties for round {election_id_text}</b>
-Round's started: <b>{timestamp2utcdatetime(election_id)}</b>
-Round's over: <b>{timestamp2utcdatetime(end)}</b>
+Round started: <b>{timestamp2utcdatetime(election_id)}</b>
+Round ended: <b>{timestamp2utcdatetime(end)}</b>
 
 """
 
@@ -149,7 +149,7 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
             complaints = self.ton.GetSaveComplaints().get(str(election_id)) or {}
         passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
         if not passed_complaints:
-            text += "No poor performing validators in the round"
+            text += "No poorly performing validators in the round"
             self._send_telegram_message(token, chat_id, text)
             return
         try:
