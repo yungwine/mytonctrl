@@ -140,7 +140,11 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
         if token is None or chat_id is None:
             raise Exception("BotToken is not set")
 
-        complaints = self.ton.GetComplaints(election_id) or {}
+        try:
+            complaints = self.ton.GetComplaints(election_id) or {}
+        except Exception as e:  # list_complaints fails for an election the elector has already wiped
+            self.local.add_log(f"send_complaints: failed to get complaints from elector: {e}", "warning")
+            complaints = {}
         if not complaints:  # the elector wipes the past election at unfreeze, use the last saved snapshot
             complaints = self.ton.GetSaveComplaints().get(str(election_id)) or {}
         passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
