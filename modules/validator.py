@@ -144,22 +144,30 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
         if not complaints:  # the elector wipes the past election at unfreeze, use the last saved snapshot
             complaints = self.ton.GetSaveComplaints().get(str(election_id)) or {}
         passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
-        vl_past = self.ton.GetValidatorsList(past=True)
         if not passed_complaints:
             text += "No poor performing validators in the round"
             self._send_telegram_message(token, chat_id, text)
             return
+        try:
+            vl_past = self.ton.GetValidatorsList(past=True)
+        except Exception as e:  # a stale save_vl entry cached by an old version breaks from_dict
+            self.local.add_log(f"send_complaints: failed to get past validators list: {e}", "warning")
+            vl_past = []
         for c in passed_complaints:
             for vid, vl in enumerate(vl_past):
-                if vl.adnl_addr == c.get("adnl"):
+                if vl.adnl_addr == c.get("adnl") and vl.efficiency is not None:
                     c["vid"] = vid
                     c["efficiency"] = vl.efficiency
                     break
 
+            efficiency = c.get("efficiency")
+            efficiency_text = f"{efficiency}%" if efficiency is not None else "n/a"
+            vid_ = c.get("vid")
+            vid_text = vid_ if vid_ is not None else "n/a"
             text += f"""
-<b>Index: {c.get("vid")}</b>
+<b>Index: {vid_text}</b>
 ADNL: <code>{c.get("adnl")}</code>
-Efficiency: <b>{c.get("efficiency")}%</b>
+Efficiency: <b>{efficiency_text}</b>
 Penalty: <b>{round(c.get("suggestedFine"))} TON</b>
 
 """
