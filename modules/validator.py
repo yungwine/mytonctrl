@@ -141,6 +141,8 @@ Round's over: <b>{timestamp2utcdatetime(end)}</b>
             raise Exception("BotToken is not set")
 
         complaints = self.ton.GetComplaints(election_id) or {}
+        if not complaints:  # the elector wipes the past election at unfreeze, use the last saved snapshot
+            complaints = self.ton.GetSaveComplaints().get(str(election_id)) or {}
         passed_complaints = [c for c in complaints.values() if c.get("isPassed")]
         vl_past = self.ton.GetValidatorsList(past=True)
         if not passed_complaints:

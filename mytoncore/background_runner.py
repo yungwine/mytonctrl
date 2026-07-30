@@ -106,10 +106,12 @@ class BackgroundRunner:
             return
         config32 = self._ton.get_config_32()
         end = config32.end_work_time
+        config15 = self._ton.get_config_15()
+        voting_end = end + config15.stake_held_for  # complaints voting lasts until stakes unfreeze
         ts = get_timestamp()
         if not (
-            end + 1200 <= ts < end + 1800
-        ):  # send complaints only once after the round end
+            voting_end <= ts < voting_end + 600
+        ):  # send complaints only once after the voting is finished
             return
         self._validator_module.send_complaints()
 
