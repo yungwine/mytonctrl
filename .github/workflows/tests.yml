@@ -1,0 +1,54 @@
+name: Lint + Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pytest-mock
+
+      - name: Run Ruff
+        run: |
+          ruff check
+
+      - name: Run Ruff format check
+        run: |
+          ruff format mytonctrl/ --check
+
+      - name: Build project
+        run: |
+          pip install -U .
+
+      - name: Run Pyright
+        run: |
+          pip install pyright
+          pyright
+
+      - name: Run pytest
+        run: |
+          pytest --import-mode=append  # to test built package

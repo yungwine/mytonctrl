@@ -1,4 +1,3 @@
-from .utils import *
-from .mytoncore import *
-from mypylib.mypylib import MyPyClass
-from mypyconsole.mypyconsole import MyPyConsole
+from .mytoncore import MyTonCore
+
+__all__ = ["MyTonCore"]

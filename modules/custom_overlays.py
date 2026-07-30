@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import json
 import requests
 
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
 from mytoncore.utils import hex2base64
+from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage_one_arg
 
 
 class CustomOverlayModule(MtcModule):
 
-    @staticmethod
-    def parse_config(name: str, config: dict, vset: list = None):
+    def parse_config(self, name: str, config: dict, vset: list | None = None):
         """
         Converts config to validator-console friendly format
         :param name: custom overlay name
@@ -17,11 +19,15 @@ class CustomOverlayModule(MtcModule):
         :param vset: list of validators adnl addresses, can be None if `@validators` not in config
         :return:
         """
+        use_quic_default = self.ton.local.db.get('customOverlaysUseQuic', True)
         result = {
             "name": name,
-            "nodes": []
+            "nodes": [],
+            "use_quic": config.get('use_quic', use_quic_default),
         }
         for k, v in config.items():
+            if k == 'use_quic':
+                continue
             if k == '@validators' and v:
                 if vset is None:
                     raise Exception("Validators set is not defined but @validators is in config")
@@ -48,8 +54,7 @@ class CustomOverlayModule(MtcModule):
         return result
 
     def add_custom_overlay(self, args):
-        if len(args) != 2:
-            color_print("{red}Bad args. Usage:{endc} add_custom_overlay <name> <path_to_config>")
+        if not check_usage_two_args("add_custom_overlay", args):
             return
         path = args[1]
         with open(path, 'r') as f:
@@ -74,8 +79,7 @@ class CustomOverlayModule(MtcModule):
             print(json.dumps(v, indent=4))
 
     def delete_custom_overlay(self, args):
-        if len(args) != 1:
-            color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
+        if not check_usage_one_arg("delete_custom_overlay", args):
             return
         if '@validators' in self.ton.get_custom_overlays().get(args[0], {}):
             self.ton.delete_custom_overlay(args[0])
@@ -99,7 +103,7 @@ class CustomOverlayModule(MtcModule):
         return False
 
     def delete_custom_overlay_from_vc(self, name: str):
-        result = self.ton.validatorConsole.Run(f"delcustomoverlay {name}")
+        result = self.ton.validatorConsole.run(f"delcustomoverlay {name}")
         return 'success' in result
 
     def add_custom_overlay_to_vc(self, config: dict):
@@ -110,8 +114,11 @@ class CustomOverlayModule(MtcModule):
         path = self.ton.tempDir + f'/custom_overlay_{config["name"]}.json'
         with open(path, 'w') as f:
             json.dump(config, f)
-        result = self.ton.validatorConsole.Run(f"addcustomoverlay {path}")
-        return 'success' in result
+        result = self.ton.validatorConsole.run(f"addcustomoverlay {path}")
+        if 'success' not in result:
+            self.ton.local.add_log(f"Failed to add custom overlay {config.get('name')} to validator-console: {result}", "error")
+            return False
+        return True
 
     def custom_overlays(self):
         config = self.get_default_custom_overlay()
@@ -120,7 +127,7 @@ class CustomOverlayModule(MtcModule):
         self.deploy_custom_overlays()
 
     def deploy_custom_overlays(self):
-        result = self.ton.validatorConsole.Run("showcustomoverlays")
+        result = self.ton.validatorConsole.run("showcustomoverlays")
         if 'unknown command' in result:
             return  # node old version
         names = []
@@ -128,13 +135,13 @@ class CustomOverlayModule(MtcModule):
             if line.startswith('Overlay'):
                 names.append(line.split(' ')[1].replace('"', '').replace(':', ''))
 
-        config34 = self.ton.GetConfig34()
-        current_el_id = config34['startWorkTime']
-        current_vset = [i["adnlAddr"] for i in config34['validators']]
+        config34 = self.ton.get_config_34()
+        current_el_id = config34.start_work_time
+        current_vset = [i.adnl_addr for i in config34.validators]
 
-        config36 = self.ton.GetConfig36()
-        next_el_id = config36['startWorkTime'] if config36['validators'] else 0
-        next_vset = [i["adnlAddr"] for i in config36['validators']]
+        config36 = self.ton.get_config_36()
+        next_el_id = config36.start_work_time if config36 is not None else 0
+        next_vset = [i.adnl_addr for i in config36.validators] if config36 is not None else []
 
         for name in names:
             # check that overlay still exists in mtc db
@@ -184,6 +191,6 @@ class CustomOverlayModule(MtcModule):
         return config.get(network)
 
     def add_console_commands(self, console):
-        console.AddItem("add_custom_overlay", self.add_custom_overlay, self.local.translate("add_custom_overlay_cmd"))
-        console.AddItem("list_custom_overlays", self.list_custom_overlays, self.local.translate("list_custom_overlays_cmd"))
-        console.AddItem("delete_custom_overlay", self.delete_custom_overlay, self.local.translate("delete_custom_overlay_cmd"))
+        add_command(self.local, console, "add_custom_overlay", self.add_custom_overlay)
+        add_command(self.local, console, "list_custom_overlays", self.list_custom_overlays)
+        add_command(self.local, console, "delete_custom_overlay", self.delete_custom_overlay)

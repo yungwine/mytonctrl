@@ -1,9 +1,9 @@
 import os
 
-import pkg_resources
-
 from mypylib.mypylib import color_print
 from modules.pool import PoolModule
+from mytoncore.utils import get_package_resource_path
+from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage_one_arg
 
 
 class SingleNominatorModule(PoolModule):
@@ -21,12 +21,11 @@ class SingleNominatorModule(PoolModule):
             self.ton.local.add_log("create_single_pool warning: Pool already exists: " + file_path, "warning")
             return
 
-        fift_script = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/init.fif')
-        code_boc = pkg_resources.resource_filename('mytoncore',
-                                                   'contracts/single-nominator-pool/single-nominator-code.hex')
         validator_wallet = self.ton.GetValidatorWallet()
-        args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
-        result = self.ton.fift.Run(args)
+        with get_package_resource_path('mytoncore', 'contracts/single-nominator-pool/init.fif') as fift_script:
+            with get_package_resource_path('mytoncore', 'contracts/single-nominator-pool/single-nominator-code.hex') as code_boc:
+                args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
+                result = self.ton.fift.run(args)
         if "Saved single nominator pool" not in result:
             raise Exception("create_single_pool error: " + result)
 
@@ -34,16 +33,14 @@ class SingleNominatorModule(PoolModule):
         new_pool = self.ton.GetLocalPool(pool_name)
         for pool in pools:
             if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
-                new_pool.Delete()
+                new_pool.delete()
                 raise Exception("create_single_pool error: Pool with the same parameters already exists.")
 
     def new_single_pool(self, args):
-        try:
-            pool_name = args[0]
-            owner_address = args[1]
-        except:
-            color_print("{red}Bad args. Usage:{endc} new_single_pool <pool-name> <owner_address>")
+        if not check_usage_two_args("new_single_pool", args):
             return
+        pool_name = args[0]
+        owner_address = args[1]
         self.do_create_single_pool(pool_name, owner_address)
         color_print("new_single_pool - {green}OK{endc}")
 
@@ -56,11 +53,9 @@ class SingleNominatorModule(PoolModule):
         self.ton.SendFile(result_file_path, validator_wallet)
 
     def activate_single_pool(self, args):
-        try:
-            pool_name = args[0]
-        except:
-            color_print("{red}Bad args. Usage:{endc} activate_single_pool <pool-name>")
+        if not check_usage_one_arg("activate_single_pool", args):
             return
+        pool_name = args[0]
         pool = self.ton.GetLocalPool(pool_name)
         if not os.path.isfile(pool.bocFilePath):
             self.local.add_log(f"Pool {pool_name} already activated", "warning")
@@ -69,17 +64,14 @@ class SingleNominatorModule(PoolModule):
         color_print("activate_single_pool - {green}OK{endc}")
 
     def withdraw_from_single_pool(self, args):
-        try:
-            pool_addr = args[0]
-            amount = float(args[1])
-        except:
-            color_print("{red}Bad args. Usage:{endc} withdraw_from_single_pool <pool-addr> <amount>")
+        if not check_usage_two_args("withdraw_from_single_pool", args):
             return
+        pool_addr = args[0]
+        amount = float(args[1])
         self.ton.WithdrawFromPoolProcess(pool_addr, amount)
         color_print("withdraw_from_single_pool - {green}OK{endc}")
-    #end define
 
     def add_console_commands(self, console):
-        console.AddItem("new_single_pool", self.new_single_pool, self.local.translate("new_single_pool_cmd"))
-        console.AddItem("activate_single_pool", self.activate_single_pool, self.local.translate("activate_single_pool_cmd"))
-        console.AddItem("withdraw_from_single_pool", self.withdraw_from_single_pool, self.local.translate("withdraw_from_single_pool_cmd"))
+        add_command(self.local, console, "new_single_pool", self.new_single_pool)
+        add_command(self.local, console, "activate_single_pool", self.activate_single_pool)
+        add_command(self.local, console, "withdraw_from_single_pool", self.withdraw_from_single_pool)

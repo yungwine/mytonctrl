@@ -1,118 +1,102 @@
 ![GitHub stars](https://img.shields.io/github/stars/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub forks](https://img.shields.io/github/forks/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub issues](https://img.shields.io/github/issues/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub pull requests](https://img.shields.io/github/issues-pr/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub last commit](https://img.shields.io/github/last-commit/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub license](https://img.shields.io/github/license/ton-blockchain/mytonctrl?style=flat-square&logo=github)
 
-<!-- omit from toc -->
 # MyTonCtrl
 
-<!-- omit from toc --> 
-## Contents
+MyTonCtrl is a console application that is used for launching and managing TON blockchain nodes.
 
-- [What is MyTonCtrl?](#what-is-myttonctrl)
-- [MyTonCtrl Documentation](#mytonctrl-documentation)
-- [Functionality](#functionality)
-	- [List of tested operating systems](#list-of-tested-operating-systems)
-- [Installation](#installation)
-	- [Installation scripts overview](#installation-scripts-overview)
-	- [Installation modes](#installation-modes)
-	- [Installation for Ubuntu](#installation-for-ubuntu)
-	- [Installation for Debian](#installation-for-debian)
-- [Telemetry](#telemetry)
-- [MyTonCtrl installer mode](#mytonctrl-installer-mode)
-	- [Web admin panel](#web-admin-panel)
-	- [Local copy of toncenter](#local-copy-of-toncenter)
-- [Useful links](#useful-links)
+The extended documentation can be found at https://docs.ton.org/v3/documentation/nodes/mytonctrl/overview and https://docs.ton.org/v3/guidelines/nodes/overview.
+
+## Operating Systems
+
+It is recommended to use Ubuntu 22.04 LTS or Ubuntu 24.04 LTS for using MyTonCtrl. However, the full list of tested OS is below:
+
+| Operating System | Status        |
+|------------------|---------------|
+| Ubuntu 20.04 LTS | OK            |
+| Ubuntu 22.04 LTS | OK            |
+| Ubuntu 24.04 LTS | OK            |
+| Debian 10        | Deprecated    |
+| Debian 11        | OK            |
+| Debian 12        | OK            |
+| Debian 13        | Not supported |
+
+## Installation
+Please note that during the installation and upgrade procedures, MyTonCtrl will need to escalate privileges using the `sudo` or `su` methods in order to upgrade / install system wide components. Depending on your environment, you may be prompted to enter the password for the root or sudo user.
 
 
-# What is MyTonCtrl?
-MyTonCtrl is a console application that serves as a convenient wrapper for `fift`, `lite-client`, and `validator-engine-console`. It has been specifically developed for node (validator) management tasks on the Linux operating system.
+### Modes
+MyTonCtrl supports these installation modes:
 
-![MyTonCtrl Status](screens/mytonctrl-status.png)
+- `liteserver` - run the node as a liteserver only
+- `collator` - run the node as a collator
+- `validator` - run a validator node using the validator wallet for staking
+- `single-nominator` - run a validator node with single-nominator staking (recommended for validators)
+- `nominator-pool` - run a validator node with nominator-pool staking
+- `liquid-staking` - run a validator node with liquid-staking enabled
 
-# MyTonCtrl Documentation
+`single-nominator`, `nominator-pool`, and `liquid-staking` all install a validator node and enable `validator` mode automatically.
+You can change enabled modes later after installation.
 
-Mytonctrl's documentation can be found at https://docs.ton.org/participate/run-nodes/mytonctrl.
+Learn more about node types: https://docs.ton.org/v3/documentation/nodes/overview
 
-# Functionality
-- [x] Show TON network status
-- [x] Management of local wallets
-	- [x] Create local wallet
-	- [x] Activate local wallet
-	- [x] Show local wallets
-	- [x] Import wallet from file (.pk)
-	- [x] Save wallet address to file (.addr)
-	- [x] Delete local wallet
-- [x] Show account status
-	- [x] Show account balance
-	- [x] Show account history
-	- [x] Show account status from bookmarks
-- [x] Transferring funds to the wallet
-	- [x] Transfer of a fixed amount
-	- [x] Transfer of the entire amount (all)
-	- [x] Transfer of the entire amount with wallet deactivation (alld)
-	- [x] Transferring funds to the wallet from bookmarks
-	- [x] Transferring funds to a wallet through a chain of self-deleting wallets
-- [x] Manage bookmarks
-	- [x] Add account to bookmarks
-	- [x] Show bookmarks
-	- [x] Delete bookmark
-- [x] Offer management
-	- [x] Show offers
-	- [x] Vote for the proposal
-	- [x] Automatic voting for previously voted proposals
-- [x] Controlling the validator
-	- [x] Participate in the election of a validator
-	- [x] Return bet + reward
-	- [x] Autostart validator on abnormal termination (systemd)
-	- [x] Send validator statistics to https://toncenter.com
+### Install
 
-## List of tested operating systems
-| Operating System              | Status                     |
-|-------------------------------|----------------------------|
-| Ubuntu 16.04 LTS (Xenial Xerus) | Error: TON compilation error |
-| Ubuntu 18.04 LTS (Bionic Beaver) | OK                       |
-| Ubuntu 20.04 LTS (Focal Fossa) | OK                       |
-| Ubuntu 22.04 LTS (Jammy Jellyfish) | OK                   |
-| Debian 8 | Error: Unable to locate package libgsl-dev   |
-| Debian 9 | Error: TON compilation error                 |
-| Debian 10 | OK                                         |
-
-# Installation
-## Installation scripts overview
-- `toninstaller.sh`: clones `TON` and` mytonctrl` sources to `/usr/src/ton` and`/usr/src/mytonctrl` folders, compiles programs from sources and writes them to `/usr/bin/`.
-- `mytoninstaller.py`: configures the validator and `mytonctrl`; generates validator connection keys.
-
-## Installation modes
-There are two installation modes: `liteserver` and `validator`. They both **compile** and install `TON` components and run the node/validator. Use `liteserver` mode if you want to use your node as Liteserver only.
-Use `validator` mode if you want to participate in the validator elections (you still can use that node as Liteserver).
-
-Learn more about node types: https://docs.ton.org/participate/nodes/node-types
-
-## Installation for Ubuntu
-1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
-	```sh
+1. Download installation script:
+	```shell
 	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+	```
+
+2. Run script with desired options:
+	```shell
 	sudo bash install.sh -m <mode>
 	```
-
-2. Done. You can try to run the `mytonctrl` console now.
-	```sh
-	mytonctrl
-	```
-
-
-## Installation for Debian
-1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
-	```sh
-	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+	Or for Debian:
+	```shell
 	su root -c 'bash install.sh -m <mode>'
 	```
 
-2. Done. You can try to run the `mytonctrl` console now.
-	```sh
-	mytonctrl
-	```
+To install a full archive liteserver, use:
+```shell
+sudo bash install.sh -m liteserver --archive
+```
 
-# Telemetry
-By default, `mytonctrl` sends validator statistics to the https://toncenter.com server.
+To view all available installation options use `bash install.sh --help`
+
+### Installation configuration
+
+You can also configure some installation parameters using environment variables. For example:
+* `VALIDATOR_CONSOLE_PORT` - port for validator console (default: random port in range 2000-65000)
+* `LITESERVER_PORT` - port for liteserver (default: random port in range 2000-65000)
+* `VALIDATOR_PORT` - port for validator (default: random port in range 2000-64000)
+
+You can provide `env` file with allowed variables to installation script:
+```shell
+sudo bash install.sh -m <mode> --env-file /path/to/env/
+```
+
+### Interactive CLI installer
+
+To install MyTonCtrl using convenient interactive CLI installer, run the installation script without providing mode to it:
+
+```shell
+sudo bash install.sh [args]
+```
+You will be prompted to choose the installation mode and other options.
+
+To run the interactive installer in `dry-run` mode, which will show you all the options you have selected and command 
+that will be executed during installation without actually installing MyTonCtrl, use flag `--print-env`:
+
+```shell
+sudo bash install.sh --print-env
+```
+
+After installation, you can run MyTonCtrl console using the command:
+```shell
+mytonctrl
+```
+
+## Telemetry
+By default, MyTonCtrl sends validator statistics to the https://toncenter.com server.
 It is necessary to identify network abnormalities, as well as to quickly give feedback to developers.
 To disable telemetry during installation, use the `-t` flag:
 ```sh
@@ -123,25 +107,3 @@ To disable telemetry after installation, do the following:
 ```sh
 MyTonCtrl> set sendTelemetry false
 ```
-
-# MyTonCtrl installer mode
-
-## Web admin panel
-To control the node/validator through the browser, you need to install an additional module:
-`mytonctrl` -> `installer` -> `enable JR`
-
-Next, you need to create a password for connection:
-`mytonctrl` -> `installer` -> `setwebpass`
-
-Ready. Now you can go to https://tonadmin.org site and log in with your credentials.
-git: https://github.com/igroman787/mtc-jsonrpc
-
-## Local copy of toncenter
-To set up a local https://toncenter.com copy on your server, install an additional module:
-`mytonctrl` ->`installer` -> `enable PT`
-
-Ready. A local copy of toncenter is available at `http://<server-ip-address>:8000`
-git: https://github.com/igroman787/pytonv3
-
-# Useful links
-* https://docs.ton.org/

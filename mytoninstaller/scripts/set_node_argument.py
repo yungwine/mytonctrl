@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 from mytoninstaller.node_args import get_node_args, get_node_start_command, get_validator_service
@@ -11,22 +12,34 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     """
     assert arg_name.startswith('-'), 'arg_name must start with "-" or "--"'
     service = get_validator_service()
-    command = get_node_start_command()
-    if command.split(' ')[0] != '/usr/bin/ton/validator-engine/validator-engine':
-        raise Exception('Invalid node start command in service file')
-    if command is None:
+    start_command = get_node_start_command()
+    if start_command is None:
         raise Exception('Cannot find node start command in service file')
-    args = get_node_args(command)
+    first_arg = start_command.split(' ')[0]
+    if os.path.basename(first_arg) != 'validator-engine':
+        raise Exception('Invalid node start command in service file')
+    
+    node_args = get_node_args(start_command)
     if arg_value == '-d':
-        args.pop(arg_name, None)
+        node_args.pop(arg_name, None)
     else:
-        args[arg_name] = arg_value
-    new_command = command.split(' ')[0] + ' ' + ' '.join([f'{k} {v}' for k, v in args.items()])
-    new_service = service.replace(command, new_command)
-    with open('/etc/systemd/system/validator.service', 'w') as f:
-        f.write(new_service)
+        if ' ' in arg_value:
+            node_args[arg_name] = arg_value.split()
+        else:
+            node_args[arg_name] = [arg_value]
+
+    buffer = list()
+    buffer.append(first_arg)
+    for key, value_list in node_args.items():
+        if len(value_list) == 0:
+            buffer.append(f"{key}")
+        for value in value_list:
+            buffer.append(f"{key} {value}")
+    new_start_command = ' '.join(buffer)
+    new_service = service.replace(start_command, new_start_command)
+    with open('/etc/systemd/system/validator.service', 'w') as file:
+        file.write(new_service)
     restart_node()
-#end define
 
 
 def restart_node():
@@ -36,7 +49,6 @@ def restart_node():
     exit_code = subprocess.run(["systemctl", "restart", "validator"]).returncode
     if exit_code:
         raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
-#end define
 
 
 if __name__ == '__main__':

@@ -1,11 +1,19 @@
-import base64
+from __future__ import annotations
+
+from dataclasses import asdict
+import datetime
 import json
-import os
+import random
 import subprocess
 import time
 
-from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
+import requests
+
+from mypylib.mypylib import color_print, print_table, color_text, bcolors
 from modules.module import MtcModule
+from mytoncore.utils import raw_addr_to_b64
+from mytoncore.output import tlb_to_json
+from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 
 
 class UtilitiesModule(MtcModule):
@@ -14,11 +22,9 @@ class UtilitiesModule(MtcModule):
     default_value = False
 
     def view_account_status(self, args):
-        try:
-            addrB64 = args[0]
-        except:
-            color_print("{red}Bad args. Usage:{endc} vas <account-addr>")
+        if not check_usage_one_arg("vas", args):
             return
+        addrB64 = args[0]
         addrB64 = self.ton.get_destination_addr(addrB64)
         account = self.ton.GetAccount(addrB64)
         version = self.ton.GetVersionFromCodeHash(account.codeHash)
@@ -34,7 +40,38 @@ class UtilitiesModule(MtcModule):
         print_table(codeHashTable)
         print()
         print_table(historyTable)
-    # end define
+
+    @staticmethod
+    def _timeago(
+        timestamp: int | None,
+    ) -> str:
+        now = datetime.datetime.now()
+        if timestamp is None:
+            diff = now - now
+        else:
+            diff = now - datetime.datetime.fromtimestamp(timestamp)
+        second_diff = diff.seconds
+        day_diff = diff.days
+        if day_diff < 0:
+            return ""
+        if day_diff == 0:
+            if second_diff < 10:
+                return "just now"
+            if second_diff < 60:
+                return str(second_diff) + " seconds ago"
+            if second_diff < 120:
+                return "a minute ago"
+            if second_diff < 3600:
+                return str(second_diff // 60) + " minutes ago"
+            if second_diff < 7200:
+                return "an hour ago"
+            if second_diff < 86400:
+                return str(second_diff // 3600) + " hours ago"
+        if day_diff < 31:
+            return str(day_diff) + " days ago"
+        if day_diff < 365:
+            return str(day_diff // 30) + " months ago"
+        return str(day_diff // 365) + " years ago"
 
     def get_history_table(self, addr, limit):
         addr = self.ton.get_destination_addr(addr)
@@ -44,51 +81,47 @@ class UtilitiesModule(MtcModule):
         typeText = color_text("{red}{bold}{endc}")
         table += [["Time", typeText, "Coins", "From/To"]]
         for message in history:
-            if message.srcAddr is None:
+            if message.src_addr is None:
                 continue
-            srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
-            destAddFull = f"{message.destWorkchain}:{message.destAddr}"
-            if srcAddrFull == account.addrFull:
+            srcAddrFull = f"{message.src_workchain}:{message.src_addr}"
+            destAddFull = f"{message.dest_workchain}:{message.dest_addr}"
+            if srcAddrFull == account.addr_full:
                 type = color_text("{red}{bold}>>>{endc}")
                 fromto = destAddFull
             else:
                 type = color_text("{blue}{bold}<<<{endc}")
                 fromto = srcAddrFull
-            fromto = self.ton.AddrFull2AddrB64(fromto)
+            if 'None' in fromto:
+                fromto = 'None'
+            else:
+                fromto = raw_addr_to_b64(fromto, is_testnet=self.ton.IsTestnet())
             # datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
-            datetime = timeago(message.time)
+            datetime = 'n/a'
+            if message.time is not None:
+                datetime = self._timeago(message.time)
             table += [[datetime, type, message.value, fromto]]
         return table
-    # end define
 
     def view_account_history(self, args):
-        try:
-            addr = args[0]
-            limit = int(args[1])
-        except:
-            color_print("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
+        if not check_usage_two_args("vah", args):
             return
+        addr = args[0]
+        limit = int(args[1])
         table = self.get_history_table(addr, limit)
         print_table(table)
-    # end define
 
     def create_new_bookmark(self, args):
-        try:
-            name = args[0]
-            addr = args[1]
-        except:
-            color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr>")
+        if not check_usage_two_args("nb", args):
             return
+        name = args[0]
+        addr = args[1]
         if not self.ton.IsAddr(addr):
             raise Exception("Incorrect address")
-        # end if
-
         bookmark = dict()
         bookmark["name"] = name
         bookmark["addr"] = addr
         self.ton.AddBookmark(bookmark)
         color_print("CreatNewBookmark - {green}OK{endc}")
-    # end define
 
     def print_bookmarks_list(self, args):
         data = self.ton.GetBookmarks()
@@ -103,17 +136,13 @@ class UtilitiesModule(MtcModule):
             bookmark_data = item.get("data")
             table += [[name, addr, bookmark_data]]
         print_table(table)
-    # end define
 
     def delete_bookmark(self, args):
-        try:
-            name = args[0]
-        except:
-            color_print("{red}Bad args. Usage:{endc} db <bookmark-name>")
+        if not check_usage_one_arg("db", args):
             return
+        name = args[0]
         self.ton.DeleteBookmark(name)
         color_print("DeleteBookmark - {green}OK{endc}")
-    # end define
 
     @staticmethod
     def reduct(item):
@@ -124,7 +153,6 @@ class UtilitiesModule(MtcModule):
             end = len(item)
             result = item[0:6] + "..." + item[end - 6:end]
         return result
-    # end define
 
     def print_offers_list(self, args):
         data = self.ton.GetOffers()
@@ -148,32 +176,35 @@ class UtilitiesModule(MtcModule):
                 isPassed = item.get("isPassed")
                 if "hash" not in args:
                     hash = self.reduct(hash)
-                if isPassed == True:
+                if isPassed:
                     isPassed = bcolors.green_text("true")
-                if isPassed == False:
+                if isPassed is False:
                     isPassed = bcolors.red_text("false")
                 table += [[hash, item.config.id, votedValidators, wl, approvedPercent_text, isPassed]]
             print_table(table)
-    # end define
 
     def get_offer_diff(self, offer_hash):
         self.local.add_log("start GetOfferDiff function", "debug")
         offer = self.ton.GetOffer(offer_hash)
         config_id = offer["config"]["id"]
         config_value = offer["config"]["value"]
+        if config_id < 0:
+            color_print("{red}Offer config id is negative. Cannot get diff.{endc}")
+            return
 
         if '{' in config_value or '}' in config_value:
             start = config_value.find('{') + 1
             end = config_value.find('}')
             config_value = config_value[start:end]
-        # end if
 
-        args = [self.ton.liteClient.appPath, "--global-config", self.ton.liteClient.configPath, "--verbosity", "0"]
+        args = [self.ton.liteClient.app_path, "--global-config", self.ton.liteClient.config_path, "--verbosity", "0"]
         process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         time.sleep(1)
 
         fullConfigAddr = self.ton.GetFullConfigAddr()
         cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+        if process.stdin is None:
+            raise RuntimeError("stdin pipe not available")
         process.stdin.write(cmd.encode() + b'\n')
         process.stdin.flush()
         time.sleep(1)
@@ -184,41 +215,48 @@ class UtilitiesModule(MtcModule):
         time.sleep(1)
 
         process.terminate()
+        if process.stdout is None:
+            raise RuntimeError("stdout pipe not available")
         text = process.stdout.read().decode()
 
         lines = text.split('\n')
         b = len(lines)
+        a = None
         for i in range(b):
             line = lines[i]
             if "dumping cells as values of TLB type" in line:
                 a = i + 2
                 break
-        # end for
 
+        if a is None:
+            raise Exception("Cannot find dumping cells as values of TLB type")
+
+        start, end = None, None
         for i in range(a, b):
             line = lines[i]
             if '(' in line:
                 start = i
                 break
-        # end for
 
         for i in range(a, b):
             line = lines[i]
             if '>' in line:
                 end = i
                 break
-        # end for
+
+        if start is None or end is None:
+            raise Exception("Cannot find start and end of dumping cells as values of TLB type")
 
         buff = lines[start:end]
         text = "".join(buff)
-        newData = self.ton.Tlb2Json(text)
+        newData = tlb_to_json(text)
         newFileName = self.ton.tempDir + "data1diff"
         file = open(newFileName, 'wt')
         newText = json.dumps(newData, indent=2)
         file.write(newText)
         file.close()
 
-        oldData = self.ton.GetConfig(config_id)
+        oldData = self.ton.get_config(config_id)
         oldFileName = self.ton.tempDir + "data2diff"
         file = open(oldFileName, 'wt')
         oldText = json.dumps(oldData, indent=2)
@@ -228,17 +266,12 @@ class UtilitiesModule(MtcModule):
         print(oldText)
         args = ["diff", "--color", oldFileName, newFileName]
         subprocess.run(args)
-    # end define
 
     def offer_diff(self, args):
-        try:
-            offer_hash = args[0]
-            offer_hash = offer_hash
-        except:
-            color_print("{red}Bad args. Usage:{endc} od <offer-hash>")
+        if not check_usage_one_arg("od", args):
             return
+        offer_hash = args[0]
         self.get_offer_diff(offer_hash)
-    # end define
 
     def print_complaints_list(self, args):
         past = "past" in args
@@ -270,7 +303,6 @@ class UtilitiesModule(MtcModule):
                     isPassed = bcolors.red_text("false")
                 table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
             print_table(table)
-    # end define
 
     def print_election_entries_list(self, args):
         past = "past" in args
@@ -298,7 +330,6 @@ class UtilitiesModule(MtcModule):
                     walletAddr = self.reduct(walletAddr)
                 table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
             print_table(table)
-    # end define
 
     def print_validator_list(self, args):
         past = "past" in args
@@ -308,45 +339,83 @@ class UtilitiesModule(MtcModule):
             print("No data")
             return
         if "--json" in args:
+            data = [asdict(item) for item in data]
             text = json.dumps(data, indent=2)
             print(text)
         else:
             table = list()
-            table += [["id", "ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+            table += [["id", "ADNL", "Pubkey", "Wallet", "Stake", "Efficiency", "Online"]]
             for i, item in enumerate(data):
-                adnl = item.get("adnlAddr")
-                pubkey = item.get("pubkey")
-                walletAddr = item.get("walletAddr")
-                efficiency = item.get("efficiency")
-                online = item.get("online")
+                adnl = item.adnl_addr
+                pubkey = item.pubkey
+                walletAddr = item.wallet_addr
+                efficiency = item.efficiency
+                online = item.online
+                stake = item.stake
                 if "adnl" not in args:
                     adnl = self.reduct(adnl)
                 if "pubkey" not in args:
                     pubkey = self.reduct(pubkey)
                 if "wallet" not in args:
                     walletAddr = self.reduct(walletAddr)
-                if "offline" in args and online != False:
+                if "offline" in args and online:
                     continue
                 if online:
                     online = bcolors.green_text("true")
                 if not online:
                     online = bcolors.red_text("false")
-                table += [[str(i), adnl, pubkey, walletAddr, efficiency, online]]
+                table += [[str(i), adnl, pubkey, walletAddr, stake, efficiency, online]]
             print_table(table)
-    # end define
+
+    def check_adnl_connection(self):
+        telemetry = self.ton.local.db.get("sendTelemetry", False)
+        check_adnl = self.ton.local.db.get("checkAdnl", telemetry)
+        if not check_adnl:
+            return True, ''
+        self.local.add_log('Checking ADNL connection to local node', 'info')
+        hosts = ['45.129.96.53', '5.154.181.153', '45.12.134.214']
+        hosts = random.sample(hosts, k=3)
+        data = self.ton.get_local_adnl_data()
+        error = ''
+        ok = True
+        for host in hosts:
+            url = f'http://{host}/adnl_check'
+            try:
+                response = requests.post(url, json=data, timeout=3).json()
+            except Exception as e:
+                ok = False
+                error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
+                continue
+            result = response.get("ok")
+            if result:
+                ok = True
+                break
+            if not result:
+                ok = False
+                error = f'Failed to check ADNL connection to local node: {response.get("message")}'
+        return ok, error
+
+    def get_pool_data(self, args):
+        if not check_usage_one_arg("get_pool_data", args):
+            return
+        pool_name = args[0]
+        if self.ton.IsAddr(pool_name):
+            pool_addr = pool_name
+        else:
+            pool = self.ton.GetLocalPool(pool_name)
+            pool_addr = pool.addrB64
+        pool_data = self.ton.GetPoolData(pool_addr)
+        print(json.dumps(pool_data, indent=4))
 
     def add_console_commands(self, console):
-        console.AddItem("vas", self.view_account_status, self.local.translate("vas_cmd"))
-        console.AddItem("vah", self.view_account_history, self.local.translate("vah_cmd"))
-
-        console.AddItem("nb", self.create_new_bookmark, self.local.translate("nb_cmd"))
-        console.AddItem("bl", self.print_bookmarks_list, self.local.translate("bl_cmd"))
-        console.AddItem("db", self.delete_bookmark, self.local.translate("db_cmd"))
-
-        console.AddItem("ol", self.print_offers_list, self.local.translate("ol_cmd"))
-        console.AddItem("od", self.offer_diff, self.local.translate("od_cmd"))
-
-        console.AddItem("el", self.print_election_entries_list, self.local.translate("el_cmd"))
-        console.AddItem("vl", self.print_validator_list, self.local.translate("vl_cmd"))
-        console.AddItem("cl", self.print_complaints_list, self.local.translate("cl_cmd"))
-
+        add_command(self.local, console, "vas", self.view_account_status)
+        add_command(self.local, console, "vah", self.view_account_history)
+        add_command(self.local, console, "nb", self.create_new_bookmark)
+        add_command(self.local, console, "bl", self.print_bookmarks_list)
+        add_command(self.local, console, "db", self.delete_bookmark)
+        add_command(self.local, console, "ol", self.print_offers_list)
+        add_command(self.local, console, "od", self.offer_diff)
+        add_command(self.local, console, "el", self.print_election_entries_list)
+        add_command(self.local, console, "vl", self.print_validator_list)
+        add_command(self.local, console, "cl", self.print_complaints_list)
+        add_command(self.local, console, "get_pool_data", self.get_pool_data)

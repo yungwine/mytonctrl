@@ -9,6 +9,11 @@
 		"ru": "Подтянуть исходный код и перекомпилировать компоненты TON",
 		"zh_TW": "拉取源碼並重新編譯 TON 組件"
 	},
+	"reload_global_config_cmd": {
+		"en": "Re-download the network global config",
+		"ru": "Переустановить глобальный конфиг сети",
+		"zh_TW": "重新下載網路全域設定檔"
+	},
 	"status_cmd": {
 		"en": "Show TON status",
 		"ru": "Показать статус TON",
@@ -19,7 +24,7 @@
 		"ru": "Показать режимы MTC",
 		"zh_TW": "顯示 MTC 模式"
 	},
-	"settings_status_cmd": {
+	"status_settings_cmd": {
 		"en": "Show all available settings with their description and values",
 		"ru": "Показать все доступные настройки с их описанием и значениями",
 		"zh_TW": "顯示所有可用設定及其描述和值"
@@ -39,10 +44,15 @@
 		"ru": "Выключить режим",
 		"zh_TW": "禁用模式"
 	},
-	"rollback_cmd" : {
-		"en": "Rollback to mytonctrl 1.0",
-		"ru": "Откатиться к mytonctrl 1.0",
-		"zh_TW": "回滾到 mytonctrl 1.0"
+	"create_backup_cmd": {
+		"en": "Create backup of MyTonCtrl",
+		"ru": "Создать резервную копию MyTonCtrl",
+		"zh_TW": "創建 MyTonCtrl 備份"
+	},
+	"restore_backup_cmd": {
+		"en": "Restore MyTonCtrl from backup",
+		"ru": "Восстановить MyTonCtrl из резервной копии",
+		"zh_TW": "從備份還原 MyTonCtrl"
 	},
 	"seqno_cmd": {
 		"en": "Get seqno wallet",
@@ -79,7 +89,7 @@
 		"ru": "Установить версию кошелька",
 		"zh_TW": "設定錢包版本"
 	},
-	"ex_cmd": {
+	"ew_cmd": {
 		"en": "Export wallet",
 		"ru": "Экспортировать кошелек",
 		"zh_TW": "匯出錢包"
@@ -149,6 +159,131 @@
 		"ru": "Показать действующие жалобы",
 		"zh_TW": "顯示投訴列表"
 	},
+	"get_pool_data_cmd": {
+		"en": "Print `get_pool_data` Get Method result for pool",
+		"ru": "Показать результат Get Method `get_pool_data` для пула",
+		"zh_TW": "列印池的 `get_pool_data` 獲取方法結果"
+	},
+	"pools_list_cmd": {
+		"en": "Show pools list",
+		"ru": "Показать список пулов",
+		"zh_TW": "顯示池列表"
+	},
+	"delete_pool_cmd": {
+		"en": "Delete pool from pools list",
+		"ru": "Удалить пул из списка пулов",
+		"zh_TW": "從池列表中刪除池"
+	},
+	"import_pool_cmd": {
+		"en": "Import pool to pools list",
+		"ru": "Импортировать пул в список пулов",
+		"zh_TW": "將池匯入池列表"
+	},
+	"new_pool_cmd": {
+		"en": "Create new nominator pool",
+		"ru": "Создать новый пул номинаторов",
+		"zh_TW": "創建新的提名池"
+	},
+	"activate_pool_cmd": {
+		"en": "Activate pool",
+		"ru": "Активировать пул",
+		"zh_TW": "啟用池"
+	},
+	"update_validator_set_cmd": {
+		"en": "Update validator set on pool and recover stake if possible",
+		"ru": "Обновить набор валидаторов в пуле и восстановить стейк, если возможно",
+		"zh_TW": "更新池中的驗證者集並在可能的情況下恢復賭注"
+	},
+	"withdraw_from_pool_cmd": {
+		"en": "Withdraw validator stake from pool",
+		"ru": "Вывести стейк валидатора из пула",
+		"zh_TW": "從池中提取驗證者賭注"
+	},
+	"deposit_to_pool_cmd": {
+		"en": "Deposit validator stake to pool",
+		"ru": "Внести стейк валидатора в пул",
+		"zh_TW": "將驗證者賭注存入池中"
+	},
+	"new_single_pool_cmd": {
+		"en": "Create new single-nominator pool",
+		"ru": "Создать новый пул single-nominator",
+		"zh_TW": "創建新的單提名池"
+	},
+	"activate_single_pool_cmd": {
+		"en": "Activate single-nominator pool",
+		"ru": "Активировать пул single-nominator",
+		"zh_TW": "啟用單提名池"
+	},
+	"withdraw_from_single_pool_cmd": {
+		"en": "Withdraw from single-nominator pool",
+		"ru": "Вывести из пула single-nominator",
+		"zh_TW": "從單提名池中提取"
+	},
+	"create_controllers_cmd": {
+		"en": "Create liquid staking controllers",
+		"ru": "Создать контроллеры для liquid staking",
+		"zh_TW": "創建流動質押控制器"
+	},
+	"update_controllers_cmd": {
+		"en": "Update liquid staking controllers",
+		"ru": "Обновить контроллеры для liquid staking",
+		"zh_TW": "更新流動質押控制器"
+	},
+	"controllers_list_cmd": {
+		"en": "Show liquid staking controllers list",
+		"ru": "Показать список контроллеров для liquid staking",
+		"zh_TW": "顯示流動質押控制器列表"
+	},
+	"get_controller_data_cmd": {
+		"en": "Print `all_data` Get Method result for controller",
+		"ru": "Показать результат Get Method `all_data` для контроллера",
+		"zh_TW": "列印控制器的 `all_data` 獲取方法結果"
+	},
+	"deposit_to_controller_cmd": {
+		"en": "Deposit to liquid staking controller from validator's wallet",
+		"ru": "Внести на контроллер для liquid staking из кошелька валидатора",
+		"zh_TW": "從驗證者錢包存入流動質押控制器"
+	},
+	"withdraw_from_controller_cmd": {
+		"en": "Withdraw coins from liquid staking controller",
+		"ru": "Вывести монеты с контроллера для liquid staking",
+		"zh_TW": "從流動質押控制器提取幣"
+	},
+	"calculate_annual_controller_percentage_cmd": {
+		"en": "Calculate annual percentage for liquid staking controller",
+		"ru": "Рассчитать годовой процент для контроллера liquid staking",
+		"zh_TW": "計算流動質押控制器的年利率"
+	},
+	"controller_update_validator_set_cmd": {
+		"en": "Manually start liquid staking controller processing",
+		"ru": "Вручную запустить обработку контроллера liquid staking",
+		"zh_TW": "手動啟動流動質押控制器處理"
+	},
+	"stop_controller_cmd": {
+		"en": "Stop liquid staking controller",
+		"ru": "Остановить контроллер liquid staking",
+		"zh_TW": "停止流動質押控制器"
+	},
+	"stop_and_withdraw_controller_cmd": {
+		"en": "Stop and withdraw from liquid staking controller",
+		"ru": "Остановить и вывести с контроллера liquid staking",
+		"zh_TW": "停止並從流動質押控制器提取"
+	},
+	"add_controller_cmd": {
+		"en": "Add liquid staking controller to validator",
+		"ru": "Добавить контроллер liquid staking к валидатору",
+		"zh_TW": "將流動質押控制器添加到驗證者"
+	},
+	"check_liquid_pool_cmd": {
+		"en": "Check liquid staking pool",
+		"ru": "Проверить пул liquid staking",
+		"zh_TW": "檢查流動質押池"
+	},
+	"test_calculate_loan_amount_cmd": {
+		"en": "Test calculate loan amount for liquid staking controller",
+		"ru": "Тест рассчета суммы займа для контроллера liquid staking",
+		"zh_TW": "測試計算流動質押控制器的貸款金額"
+	},
 	"vc_cmd": {
 		"en": "Vote for complaint",
 		"ru": "Голосовать за жалобу",
@@ -165,18 +300,18 @@
 		"zh_TW": "投票選舉入口"
 	},
 	"vl_cmd": {
-		"en": "Show active validators",
+		"en": "Show current validators",
 		"ru": "Показать действующие валидаторы",
 		"zh_TW": "顯示活躍的驗證者"
 	},
 	"get_cmd": {
-		"en": "Get settings",
-		"ru": "Посмотреть настройки",
+		"en": "Get setting",
+		"ru": "Посмотреть настройку",
 		"zh_TW": "獲取設定"
 	},
 	"set_cmd": {
-		"en": "Set settings",
-		"ru": "Задать настройки",
+		"en": "Set setting",
+		"ru": "Задать настройку",
 		"zh_TW": "設定設定"
 	},
 	"hr_cmd": {
@@ -195,14 +330,39 @@
 		"zh_TW": "禁用挖礦"
 	},
 	"installer_cmd": {
-		"en": "Run the installer of TON modules",
-		"ru": "Запустить установщик модулей TON",
-		"zh_TW": "執行 TON 模組的安裝程序"
+		"en": "Run the installer of TON modules CLI or specific command",
+		"ru": "Запустить установщик модулей TON CLI или конкретную команду",
+		"zh_TW": "運行 TON 模塊 CLI 或特定命令的安裝程式"
 	},
 	"check_ef_cmd": {
 		"en": "Check the efficiency of the validator",
 		"ru": "Проверить эффективность валидатора",
 		"zh_TW": "檢查驗證者的效率"
+	},
+	"post_complaints_cmd": {
+		"en": "Post round penalties (passed complaints) to Telegram chat",
+		"ru": "Отправить штрафы раунда (принятые жалобы) в Telegram чат",
+		"zh_TW": "將本輪罰款（已通過的投訴）發送到 Telegram 聊天"
+	},
+	"add_collator_cmd": {
+		"en": "Add collator to validator",
+		"ru": "Добавить коллатор к валидатору",
+		"zh_TW": "將協作者添加到驗證者"
+	},
+	"delete_collator_cmd": {
+		"en": "Delete collator from this validator collators list",
+		"ru": "Удалить коллатор из списка коллаторов этого валидатора",
+		"zh_TW": "從此驗證者協作者列表中刪除協作者"
+	},
+	"print_collators_cmd": {
+		"en": "Print collators of this validator",
+		"ru": "Показать коллаторы этого валидатора",
+		"zh_TW": "列印此驗證者的協作者"
+	},
+	"reset_collators_cmd": {
+		"en": "Reset collators list",
+		"ru": "Сбросить список коллаторов",
+		"zh_TW": "重置協作者列表"
 	},
 	"ton_status_head": {
 		"en": "{cyan}===[ TON network status ]==={endc}",
@@ -214,15 +374,10 @@
 		"ru": "Название сети: {0}",
 		"zh_TW": "網路名字: {0}"
 	},
-	"ton_status_tps": {
-		"en": "Transactions per second (TPS): {0}, {1}, {2}",
-		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}",
-		"zh_TW": "每秒交易數 (TPS): {0}, {1}, {2}"
-	},
 	"ton_status_validators": {
-		"en": "Number of validators: {0}({1})",
-		"ru": "Количество валидаторов: {0}({1})",
-		"zh_TW": "驗證者數量: {0}({1})"
+		"en": "Number of validators: {0}",
+		"ru": "Количество валидаторов: {0}",
+		"zh_TW": "驗證者數量: {0}"
 	},
 	"ton_status_shards": {
 		"en": "Number of shardchains: {0}",
@@ -248,6 +403,21 @@
 		"en": "{cyan}===[ Node status ]==={endc}",
 		"ru": "{cyan}===[ Статус ноды ]==={endc}",
 		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
+	},
+	"node_mode": {
+		"en": "Node mode: {{underline}}{0}{{endc}}",
+		"ru": "Режим ноды: {{underline}}{0}{{endc}}",
+		"zh_TW": "節點模式: {{underline}}{0}{{endc}}"
+	},
+	"node_ip_address": {
+		"en": "Node IP address: {{bold}}{0}{{endc}}",
+		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
+		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
+	},
+	"node_ports": {
+		"en": "Node ports: {0}",
+		"ru": "Порты ноды: {0}",
+		"zh_TW": "節點端口: {0}"
 	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
@@ -314,15 +484,50 @@
 		"ru": "Статус локального валидатора: {0}, {1}",
 		"zh_TW": "本地驗證者狀態: {0}, {1}"
 	},
+	"local_status_validator_initial_sync": {
+		"en": "Local validator initial sync status: {0}",
+		"ru": "Статус начальной синхронизации локального валидатора: {0}",
+		"zh_TW": "本地驗證者初始同步狀態: {0}"
+	},
 	"local_status_validator_out_of_sync": {
 		"en": "Local validator out of sync: {0}",
 		"ru": "Рассинхронизация локального валидатора: {0}",
 		"zh_TW": "本地驗證者不同步: {0}"
 	},
+	"local_status_master_out_of_sync": {
+		"en": "Masterchain out of sync: {0}",
+		"ru": "Рассинхронизация Мастерчейна локального валидатора: {0}",
+		"zh_TW": "主鏈不同步: {0}"
+	},
+	"local_status_shard_out_of_sync": {
+		"en": "Shardchain out of sync: {0}",
+		"ru": "Рассинхронизация Шардчейна локального валидатора: {0}",
+		"zh_TW": "分片鏈不同步: {0}"
+	},
 	"local_status_validator_out_of_ser": {
 		"en": "Local validator last state serialization: {0}",
 		"ru": "Серализация стейта локального валидатора была: {0}",
 		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
+	},
+	"active_validator_groups": {
+		"en": "Active validator groups (masterchain,shardchain): {0},{1}",
+		"ru": "Активные группы валидатора (мастерчейн, шардчейн): {0},{1}",
+		"zh_TW": "活动验证器组（主链、碎片链: {0},{1}"
+	},
+	"collated_blocks": {
+		"en": "Collated blocks since validation round started (success/error): {0}/{1}",
+		"ru": "Собранные блоки с начала раунда валидации (успех/ошибка): {0}/{1}",
+		"zh_TW": "自驗證週期開始以來的彙編區塊 (成功/錯誤): {0}/{1}"
+	},
+	"validated_blocks": {
+		"en": "Validated blocks since validation round started (success/error): {0}/{1}",
+		"ru": "Проверенные блоки с начала раунда валидации (успех/ошибка): {0}/{1}",
+		"zh_TW": "自驗證週期開始以來的驗證區塊 (成功/錯誤): {0}/{1}"
+	},
+	"ls_queries": {
+		"en": "Liteserver queries for the past {0} sec (success/error): {1}/{2}",
+		"ru": "Запросы к лайтсерверу за последние {0} сек (успех/ошибка): {1}/{2}",
+		"zh_TW": "過去 {0} 秒的輕量級服務器查詢 (成功/錯誤): {1}/{2}"
 	},
 	"local_status_db": {
 		"en": "Local validator database size: {0}, {1}",
@@ -424,6 +629,11 @@
 		"ru": "{red}Убедитесь, что вы подписаны на канал валидаторов TON в Telegram: https://t.me/tonstatus {endc}\nЧтобы отключить это предупреждение, используйте команду `set subscribe_tg_channel true`",
 		"zh_TW": "{red}確保您已訂閱了 Telegram 上的 TON 驗證者頻道: https://t.me/tonstatus {endc}\n要禁用此警告，請使用命令 `set subscribe_tg_channel true`"
 	},
+	"initial_sync_warning": {
+		"en": "{red}Initial Node sync is not completed. The displayed status is incomplete. {endc}",
+		"ru": "{red}Начальная синхронизация ноды не завершена. Отображаемый статус не полный. {endc}",
+		"zh_TW": "{red}初始節點同步未完成。顯示的狀態不完整。 {endc}"
+	},
 	"sync_warning": {
 		"en": "{red}Node is out of sync. The displayed status is incomplete. {endc}",
 		"ru": "{red}Нода не синхронизирована с сетью. Отображаемый статус не полный. {endc}",
@@ -445,9 +655,24 @@
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
 	"slashed_warning": {
-		"en": "{red}You were fined by 101 TON for low efficiency in the previous round.{endc}",
-		"ru": "{red}Вы были оштрафованы на 101 TON за низкую эффективность в предыдущем раунде.{endc}",
-		"zh_TW": "{red}您因上一輪效率低而被罰款 101 TON。{endc}"
+		"en": "{{red}}You were fined by {0} TON for low efficiency in the previous round.{{endc}}",
+ 		"ru": "{{red}}Вы были оштрафованы на {0} TON за низкую эффективность в предыдущем раунде.{{endc}}",
+ 		"zh_TW": "{{red}}您因上一輪效率低而被罰款 {0} TON。{{endc}}"
+	},
+	"ubuntu_version_warning": {
+		"en": "{{red}}Ubuntu version must be 22.04 or 24.04. Found {0}. {{endc}}",
+		"ru": "{{red}}Версия Ubuntu должна быть 22.04 или 24.04. Найдена {0}. {{endc}}",
+		"zh_TW": "{{red}}Ubuntu 版本必須是 22.04 或 24.04。找到 {0}。{{endc}}"
+	},
+	"node_port_warning": {
+		"en": "{{red}}Node port {0} is greater than 64535 but quic port is not set. {{endc}}",
+		"ru": "{{red}}Порт ноды {0} больше 64535, но quic порт не установлен. {{endc}}",
+		"zh_TW": "{{red}}節點端口 {0} 大於 64535，但 quic 端口未設置。{{endc}}"
+	},
+	"ton_http_api_version_warning": {
+		"en": "{{red}}ton-http-api version {0} is less than required {1}. Please reinstall it via command `installer enable THA`.{{endc}}",
+		"ru": "{{red}}Версия ton-http-api {0} ниже требуемой {1}. Пожалуйста, переустановите его через команду `installer enable THA`.{{endc}}",
+		"zh_TW": "{{red}}ton-http-api 版本 {0} 低於所需的 {1}。請通過命令 `installer enable THA` 重新安裝。{{endc}}"
 	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
@@ -464,15 +689,100 @@
 		"ru": "Удалить пользовательский оверлей",
 		"zh_TW": "刪除自定義覆蓋"
 	},
-	"cleanup_cmd": {
-		"en": "Clean node old logs and temp files",
-		"ru": "Очистить старые логи и временные файлы ноды",
-		"zh_TW": "清理節點舊日誌和臨時文件"
+	"enable_alert_cmd": {
+		"en": "Enable specific Telegram Bot alert",
+		"ru": "Включить определенное оповещение через Telegram Bot",
+		"zh_TW": "啟用特定的 Telegram Bot 警報"
+	},
+	"disable_alert_cmd": {
+		"en": "Disable specific Telegram Bot alert",
+		"ru": "Отключить определенное оповещение через Telegram Bot",
+		"zh_TW": "禁用特定的 Telegram Bot 警報"
+	},
+	"list_alerts_cmd": {
+		"en": "List all available Telegram Bot alerts",
+		"ru": "Список всех доступных оповещений через Telegram Bot",
+		"zh_TW": "列出所有可用的 Telegram Bot 警報"
+	},
+	"test_alert_cmd": {
+		"en": "Send test alert via Telegram Bot",
+		"ru": "Отправить тестовое оповещение через Telegram Bot",
+		"zh_TW": "通過 Telegram Bot 發送測試警報"
+	},
+	"setup_alert_bot_cmd": {
+		"en": "Setup Telegram Bot for alerts",
+		"ru": "Настроить Telegram Bot для оповещений",
+		"zh_TW": "設置 Telegram Bot 以接收警報"
+	},
+	"remove_btc_teleport_cmd": {
+		"en": "Remove BTC Teleport Oracle",
+		"ru": "Удалить BTC Teleport Oracle",
+		"zh_TW": "刪除 BTC Teleport Oracle"
+	},
+	"setup_collator_cmd": {
+		"en": "Setup collator",
+		"ru": "Настроить коллатор",
+		"zh_TW": "設置協作者"
+	},
+	"print_local_collators_cmd": {
+		"en": "Print collators running on this node",
+		"ru": "Показать коллаторы, работающие на этой ноде",
+		"zh_TW": "列印在此節點上運行的協作者"
 	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",
 		"ru": "Запустить бенчмарк",
 		"zh_TW": "運行基準測試"
+	},
+	"set_collation_config_cmd": {
+		"en": "Set block collation config",
+		"ru": "Установить конфиг сборки блоков",
+		"zh_TW": "設置區塊彙編配置"
+	},
+	"update_collation_config_cmd": {
+		"en": "Update block collation config",
+		"ru": "Обновить конфиг сборки блоков",
+		"zh_TW": "更新區塊彙編配置"
+	},
+	"print_collation_config_cmd": {
+		"en": "Print block collation config",
+		"ru": "Показать конфиг сборки блоков",
+		"zh_TW": "顯示區塊彙編配置"
+	},
+	"download_archive_blocks_cmd": {
+		"en": "Download archive blocks from TON Storage",
+		"ru": "Скачать архивные блоки из TON Storage",
+		"zh_TW": "從 TON Storage 下載存檔區塊"
+	},
+	"add_validator_to_collation_wl_cmd": {
+		"en": "Add validator to block collation whitelist",
+		"ru": "Добавить валидатора в вайтлист сборки блоков",
+		"zh_TW": "將驗證者添加到區塊彙編白名單"
+	},
+	"delete_validator_from_collation_wl_cmd": {
+		"en": "Remove validator from block collation whitelist",
+		"ru": "Удалить валидатора из вайтлиста сборки блоков",
+		"zh_TW": "從區塊彙編白名單中刪除驗證者"
+	},
+	"disable_collation_wl_cmd": {
+		"en": "Disable block collation whitelist",
+		"ru": "Отключить вайтлист сборки блоков",
+		"zh_TW": "禁用區塊彙編白名單"
+	},
+	"print_collation_whitelist_cmd": {
+		"en": "Print block collation whitelist",
+		"ru": "Показать вайтлист сборки блоков",
+		"zh_TW": "列印區塊彙編白名單"
+	},
+	"stop_collator_cmd": {
+		"en": "Stop running collator on this node. Use without args to stop all collators",
+		"ru": "Остановить работающий коллатор на этой ноде. Используйте без аргументов, чтобы остановить все коллаторы",
+		"zh_TW": "停止在此節點上運行的協作者。無參數使用以停止所有協作者"
+	},
+	"set_quic_port_cmd": {
+		"en": "Set QUIC port for node. Deletes existing QUIC addresses and sets new one with specified port (use port = 0 to delete). Changes ADNL addresses categories of validator and collator",
+		"ru": "Установить порт QUIC для узла. Удаляет существующие адреса QUIC и устанавливает новый с указанным портом (используйте port = 0 для удаления). Изменяет категории ADNL адресов для валидатора и коллатора",
+		"zh_TW": "設定節點的 QUIC 埠。刪除現有的 QUIC 位址並設定新的位址，帶有指定的埠 (使用 port = 0 刪除)。更改驗證者和協作者的 ADNL 位址類別"
 	},
 	"000a": {
 		"en": "001",

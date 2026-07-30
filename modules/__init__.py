@@ -1,13 +1,15 @@
 import typing
 from dataclasses import dataclass
 
+from modules.collator import CollatorModule
 from modules.module import MtcModule
-from modules.pool import PoolModule
 from modules.nominator_pool import NominatorPoolModule
 from modules.single_pool import SingleNominatorModule
 from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
 from modules.liteserver import LiteserverModule
+from modules.alert_bot import AlertBotModule
+from modules.prometheus import PrometheusModule
 
 
 MODES = {
@@ -15,7 +17,10 @@ MODES = {
     'nominator-pool': NominatorPoolModule,
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
-    'liteserver': LiteserverModule
+    'liteserver': LiteserverModule,
+    'collator': CollatorModule,
+    'alert-bot': AlertBotModule,
+    'prometheus': PrometheusModule
 }
 
 
@@ -32,7 +37,8 @@ class Setting:
 
 SETTINGS = {
     'stake': Setting('validator', None, 'Stake amount'),
-    'stakePercent': Setting('validator', 99, 'Stake percent if `stake` is null'),
+    'stakePercent': Setting('validator', 100, 'Stake percent if `stake` is null'),
+    'stakeNoSplit': Setting('validator', False, 'Do not split `stakePercent` stake in half'),
     'isSlashing': Setting('validator', None, 'Create complaints to validators'),
     'validatorWalletName': Setting('validator', 'wallet_001', 'Validator\'s wallet name'),
     'maxFactor': Setting('validator', None, 'Param send to Elector. if null will be taken from 17 config param'),
@@ -53,8 +59,15 @@ SETTINGS = {
     'fift_timeout': Setting(None, 3, 'Fift default timeout'),
     'useDefaultCustomOverlays': Setting(None, True, 'Participate in default custom overlays node eligible to'),
     'defaultCustomOverlaysUrl': Setting(None, 'https://ton-blockchain.github.io/fallback_custom_overlays.json', 'Default custom overlays config url'),
+    'customOverlaysUseQuic': Setting(None, True, 'Default for the `use_quic` field sent to validator-console for custom overlays that don\'t set it explicitly'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
+    'auto_backup': Setting('validator', None, 'Make validator backup every election'),
+    'auto_backup_path': Setting('validator', '/tmp/mytoncore/auto_backups/', 'Path to store auto-backups'),
+    'prometheus_url': Setting('prometheus', None, 'Prometheus pushgateway url'),
+    'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.'),
+    'importGc': Setting(None, None, 'Delete imported archive blocks files. Restart mytoncore to apply this setting'),
+    'updateCheckDisabled': Setting(None, False, 'Disable mytonctrl update check on startup'),
 }
 
 

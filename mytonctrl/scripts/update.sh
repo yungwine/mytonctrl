@@ -11,35 +11,47 @@ fi
 author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
-srcdir="/usr/src/"
-bindir="/usr/bin/"
+tmpdir="/tmp/mytonctrl_src/"
+python_bin="python3"
 
 # Get arguments
-while getopts a:r:b: flag
+while getopts a:r:b:S:p: flag
 do
 	case "${flag}" in
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
+    S) srcdir=${OPTARG};;
+    p) python_bin=${OPTARG};;
+    *) echo "Unknown arg"
+       exit 1;;
 	esac
 done
 
-# Цвета
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Go to work dir
-cd ${srcdir}
+if [ -z "${srcdir}" ]; then
+    srcdir="/usr/src/${repo}"
+fi
 
-# uninstall previous version
-rm -rf ${srcdir}/${repo}
-pip3 uninstall -y mytonctrl
+mkdir -p ${tmpdir}
+cd ${tmpdir}
+rm -rf ${tmpdir}/${repo}
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+git clone https://github.com/${author}/${repo}.git
+
+cd ${tmpdir}/${repo} && git checkout ${branch}
+git submodule update --init --recursive
+
+rm -rf ${srcdir}
 
 # Update code
-echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git
-cd ${repo} && git checkout ${branch}
-pip3 install -U .
+mkdir -p ${srcdir}
+cp -rfT ${tmpdir}/${repo} ${srcdir}
+cd ${srcdir}
+"${python_bin}" -m pip install -U "setuptools>=64"
+"${python_bin}" -m pip install -U .
 
 systemctl daemon-reload
 systemctl restart mytoncore

@@ -1,17 +1,20 @@
-
 #!/bin/bash
 set -e
 
-# Проверить sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
 	exit 1
 fi
 
-while getopts ":c:v:h" flag; do
+repo_git_url="https://github.com/ton-blockchain/ton.git"
+
+while getopts ":c:v:g:s:b:h" flag; do
     case "${flag}" in
+        g) repo_git_url=${OPTARG};;
         c) config=${OPTARG};;
         v) ton_node_version=${OPTARG};;
+        s) src_dir=${OPTARG};;
+        b) bin_dir=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -22,21 +25,20 @@ done
 echo "config: ${config}"
 echo "checkout to ${ton_node_version}"
 
-# Цвета
 COLOR='\033[95m'
 ENDC='\033[0m'
 
-# На OSX нет такой директории по-умолчанию, поэтому создаем...
-SOURCES_DIR=/usr/src
-BIN_DIR=/usr/bin
+# installation directories; can be overridden with -s and -b
 if [[ "$OSTYPE" =~ darwin.* ]]; then
-	SOURCES_DIR=/usr/local/src
-	BIN_DIR=/usr/local/bin
-	mkdir -p $SOURCES_DIR
+	SOURCES_DIR=${src_dir:-/usr/local/src}
+	BIN_DIR=${bin_dir:-/usr/local/bin}
+else
+	SOURCES_DIR=${src_dir:-/usr/src}
+	BIN_DIR=${bin_dir:-/usr/bin}
 fi
+mkdir -p $SOURCES_DIR
 
-# Установка требуемых пакетов
-echo -e "${COLOR}[1/6]${ENDC} Installing required packages"
+echo -e "${COLOR}[1/5]${ENDC} Installing required packages"
 if [ "$OSTYPE" == "linux-gnu" ]; then
 	if [ hash yum 2>/dev/null ]; then
 		echo "RHEL-based Linux detected."
@@ -55,7 +57,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
-		apt-get install -y build-essential curl git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev libjemalloc-dev
+		apt-get install -y build-essential curl git cmake libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev libjemalloc-dev automake libtool
 
 		# Install ninja
 		apt-get install -y ninja-build
@@ -91,24 +93,11 @@ else
 	exit 1
 fi
 
-# Установка компонентов python3
-pip3 install psutil crc16 requests
 
-# build openssl 3.0
-echo -e "${COLOR}[2/6]${ENDC} Building OpenSSL 3.0"
-rm -rf $BIN_DIR/openssl_3
-git clone https://github.com/openssl/openssl $BIN_DIR/openssl_3
-cd $BIN_DIR/openssl_3
-opensslPath=`pwd`
-git checkout openssl-3.1.4
-./config
-make build_libs -j$(nproc)
-
-# Клонирование репозиториев с github.com
-echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
+echo -e "${COLOR}[2/5]${ENDC} Preparing for compilation"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
-git clone --recursive https://github.com/ton-blockchain/ton.git
+git clone --recursive $repo_git_url $SOURCES_DIR/ton
 
 echo "checkout to ${ton_node_version}"
 
@@ -118,14 +107,17 @@ if [ "${ton_node_version}" != "master" ]; then
   cd ../
 fi
 
+cd $SOURCES_DIR/ton
+git submodule sync --recursive
+git submodule update
+cd ../
+
 git config --global --add safe.directory $SOURCES_DIR/ton
 
-# Подготавливаем папки для компиляции
 rm -rf $BIN_DIR/ton
-mkdir $BIN_DIR/ton
+mkdir -p $BIN_DIR/ton
 cd $BIN_DIR/ton
 
-# Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
@@ -136,7 +128,6 @@ else
 	export CCACHE_DISABLE=1
 fi
 
-# Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	if [[ $(uname -p) == 'arm' ]]; then
 		echo M1
@@ -145,10 +136,9 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON
 fi
 
-# Расчитываем количество процессоров для сборки
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	cpu_number=$(sysctl -n hw.logicalcpu)
 else
@@ -164,13 +154,11 @@ else
 	fi
 fi
 
-echo -e "${COLOR}[4/6]${ENDC} Source compilation, use ${cpu_number} cpus"
-ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+echo -e "${COLOR}[3/5]${ENDC} Source compilation, use ${cpu_number} cpus"
+ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy create-state
 
-# Скачиваем конфигурационные файлы lite-client
-echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
+echo -e "${COLOR}[4/5]${ENDC} Downloading config files"
 wget ${config} -O global.config.json
 
-# Выход из программы
-echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"
+echo -e "${COLOR}[5/5]${ENDC} TON software installation complete"
 exit 0
