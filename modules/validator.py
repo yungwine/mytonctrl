@@ -156,12 +156,20 @@ Round ended: <b>{timestamp2utcdatetime(end)}</b>
             vl_past = self.ton.GetValidatorsList(past=True)
         except Exception as e:  # a stale save_vl entry cached by an old version breaks from_dict
             self.local.add_log(f"send_complaints: failed to get past validators list: {e}", "warning")
-            vl_past = []
+            # the raw cache entries still hold the adnl (and sometimes efficiency), use them as is
+            vl_past = self.ton.GetSaveVl().get(str(election_id)) or []
         for c in passed_complaints:
             for vid, vl in enumerate(vl_past):
-                if vl.adnl_addr == c.get("adnl") and vl.efficiency is not None:
+                if isinstance(vl, dict):
+                    adnl = vl.get("adnl_addr") or vl.get("adnlAddr")
+                    efficiency = vl.get("efficiency")
+                else:
+                    adnl = vl.adnl_addr
+                    efficiency = vl.efficiency
+                if adnl == c.get("adnl"):
                     c["vid"] = vid
-                    c["efficiency"] = vl.efficiency
+                    if efficiency is not None:
+                        c["efficiency"] = efficiency
                     break
 
             efficiency = c.get("efficiency")
