@@ -3,15 +3,10 @@ import os
 import time
 
 from mypylib.mypylib import color_print, print_table
-from mytoncore.utils import raw_addr_to_b64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
 
 from mytonctrl.utils import GetItemFromList
 from modules.module import MtcModule
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from mytoncore import MyTonCore
 
 
 class ControllerModule(MtcModule):
@@ -188,58 +183,16 @@ class ControllerModule(MtcModule):
         self.do_add_controller(controller_addr)
         color_print("AddController - {green}OK{endc}")
 
-    def do_check_liquid_pool(self):
-        liquid_pool_addr = self.ton.GetLiquidPoolAddr()
-        account = self.ton.GetAccount(liquid_pool_addr)
-        history = self.ton.GetAccountHistory(account, 5000)
-        addrs_list = list()
-        for message in history:
-            if message.src_addr is None or message.value is None:
-                continue
-            src_addr_full = None
-            if message.src_workchain is not None and message.src_addr is not None:
-                src_addr_full = f"{message.src_workchain}:{message.src_addr}"
-            dest_addr_full = None
-            if message.dest_workchain is not None and message.dest_addr is not None:
-                dest_addr_full = f"{message.dest_workchain}:{message.dest_addr}"
-            if src_addr_full == account.addr_full:
-                fromto = dest_addr_full
-            else:
-                fromto = src_addr_full
-            if fromto is None:
-                continue
-            fromto = raw_addr_to_b64(fromto)
-            if fromto not in addrs_list:
-                addrs_list.append(fromto)
-
-        for controllerAddr in addrs_list:
-            account = self.ton.GetAccount(controllerAddr)
-            version = self.ton.GetVersionFromCodeHash(account.codeHash)
-            if version is None or "controller" not in version:
-                continue
-            print(f"check controller: {controllerAddr}")
-            self.ton.ControllerUpdateValidatorSet(controllerAddr)
-
-    def check_liquid_pool(self, args):
-        self.do_check_liquid_pool()
-        color_print("CheckLiquidPool - {green}OK{endc}")
-
     def do_calculate_loan_amount_test(self):
         min_loan = self.ton.local.db.get("min_loan", 41000)
         max_loan = self.ton.local.db.get("max_loan", 43000)
         max_interest_percent = self.ton.local.db.get("max_interest_percent", 1.5)
         max_interest = int(max_interest_percent / 100 * 16777216)
-        return self.ton.CalculateLoanAmount(min_loan, max_loan, max_interest)
+        return self.ton.calculate_loan_amount(min_loan, max_loan, max_interest)
 
     def calculate_loan_amount_test(self, args):
         t = self.do_calculate_loan_amount_test()
         print(t)
-
-    @classmethod
-    def check_enable(cls, ton: "MyTonCore"):
-        from mytoninstaller.mytoninstaller import InstallerCtrl
-        installer = InstallerCtrl.from_ton(ton)
-        installer.enable_ton_http_api()
 
     def add_console_commands(self, console):
         add_command(self.local, console, "create_controllers", self.create_controllers)
@@ -253,5 +206,4 @@ class ControllerModule(MtcModule):
         add_command(self.local, console, "stop_controller", self.stop_controller)
         add_command(self.local, console, "stop_and_withdraw_controller", self.stop_and_withdraw_controller)
         add_command(self.local, console, "add_controller", self.add_controller)
-        add_command(self.local, console, "check_liquid_pool", self.check_liquid_pool)
         add_command(self.local, console, "test_calculate_loan_amount", self.calculate_loan_amount_test)

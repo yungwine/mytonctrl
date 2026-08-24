@@ -58,10 +58,9 @@ class BackgroundRunner:
                     self._ton.VoteOffer(offer)
 
     def _complaints(self):
+        return
         validator_index = self._ton.GetValidatorIndex()
         if validator_index < 0:
-            return
-        if time.time() < 1776643200:
             return
 
         # Voting for complaints
@@ -263,6 +262,7 @@ class BackgroundRunner:
         self._local.start_cycle(self._scan_lite_servers, sec=60)
         self._local.start_cycle(self._stats_collector.save_node_statistics, sec=60)
         self._local.start_cycle(self._custom_overlay_module.custom_overlays, sec=60)
+        self._local.start_cycle(self._validator_module.apply_default_collators, sec=600)
         self._local.start_cycle(self._alert_bot_module.check_status, sec=60)
         self._local.start_cycle(self._prometheus_module.push_metrics, sec=30)
 
