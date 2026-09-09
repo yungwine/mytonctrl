@@ -5,6 +5,8 @@ These feed crafted `lite-client runmethodfull` output through the real
 flattened TVM stacks correctly (field order, uint256-hash address decoding, null
 handling; slice items are carried raw, never parsed).
 """
+from __future__ import annotations
+
 import time
 
 import pytest
