@@ -35,7 +35,7 @@ MC_SLICE = lc_slice(-1, MC_HASH)
 MC_ADDR = raw_addr_to_b64('-1:' + MC_HASH)
 PROXY_E_HASH = '33' * 32
 PROXY_O_HASH = '44' * 32
-POOL_V2_CODE_HASH = '667ff713562a9a581927494e85b01fb835e454cb45fe87a2cbbdc560338e5570'
+POOL_V2_CODE_HASH = '653ada77b5f36e40d42e59841c9f035a39fb2eedda1fa7bfa60511b6755294d3'
 
 
 def test_parse_mc_addr_from_vm_int():
